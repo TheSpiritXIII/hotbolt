@@ -3,3 +3,14 @@ name = "hotbolt"
 version = "0.1.0"
 authors = ["Daniel Hrabovcak <thespiritxiii@gmail.com>"]
 edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+hotbolt_ffi = { path = "../hotbolt_ffi" }
+quote = "1.0.7"
+
+[dependencies.syn]
+version = "1.0.35"
+features = ["full"]

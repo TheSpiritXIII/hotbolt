@@ -5,6 +5,7 @@ authors = ["Daniel Hrabovcak <thespiritxiii@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+hotbolt_ffi = { path = "../hotbolt_ffi" }
 libloading = "0.6.2"
 env_logger = "0.7.1"
 log = "0.4.11"

@@ -10,7 +10,7 @@ fn main() {
 		if let Ok(lib) = lib::Library::new(lib_path) {
 			info!("Successfully loaded library");
 			let entry_point = unsafe {
-				let func: Result<lib::Symbol<unsafe extern fn() -> ()>, _> = lib.get(b"main");
+				let func: Result<lib::Symbol<unsafe extern fn() -> ()>, _> = lib.get(hotbolt_ffi::ENTRY_MAIN.as_bytes());
 				func
 			};
 			if let Ok(symbol) = entry_point {
