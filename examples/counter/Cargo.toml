@@ -4,3 +4,6 @@ version = "0.1.0"
 authors = ["Daniel Hrabovcak <thespiritxiii@gmail.com>"]
 edition = "2018"
 publish = false
+
+[lib]
+crate-type = ["cdylib"]

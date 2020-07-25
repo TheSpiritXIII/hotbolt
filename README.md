@@ -8,5 +8,5 @@ cargo build
 pushd examples
 cargo build
 popd
-cargo run examples/target/debug/libcounter.d
+cargo run examples/target/debug/counter.dll
 ```
