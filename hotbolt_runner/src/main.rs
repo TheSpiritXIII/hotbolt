@@ -1,30 +1,31 @@
-use log::{debug, info, error};
-use libloading as lib;
-use std::env;
+pub mod runner;
+pub mod watcher;
+
+use std::sync::mpsc::channel;
+use std::{env, process, mem};
+
+use log::error;
 
 fn main() {
 	env_logger::init();
 
-	if let Some(lib_path) = env::args().skip(1).take(1).next() {
-		debug!("Library: {}", lib_path);
-		if let Ok(lib) = lib::Library::new(lib_path) {
-			info!("Successfully loaded library");
-			let entry_point = unsafe {
-				let func: Result<lib::Symbol<unsafe extern fn() -> ()>, _> = lib.get(hotbolt_ffi::ENTRY_MAIN.as_bytes());
-				func
-			};
-			if let Ok(symbol) = entry_point {
-				debug!("Loaded entry point.");
-				unsafe {
-					symbol();
-				}
-			} else {
-				error!("Error loading entry point.");
+	if let Some(filepath) = env::args().skip(1).take(1).next() {
+		let (sender, receiver) = channel();
+		let watcher = match watcher::watch(&filepath, sender) {
+			Ok(watcher) => watcher,
+			Err(e) => {
+				error!("{}", e);
+				process::exit(1);
 			}
-		} else {
-			error!("Unable to load library");
-		}
+		};
+
+		// We need watcher in scope for the entire application lifecycle.
+		// We don't want it to deallocate and stop listening to events.
+		mem::forget(watcher);
+
+		runner::run(&filepath, receiver);
 	} else {
 		error!("Must specify library path");
+		process::exit(1);
 	}
 }
