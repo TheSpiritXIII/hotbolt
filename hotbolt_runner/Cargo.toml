@@ -6,3 +6,5 @@ edition = "2018"
 
 [dependencies]
 libloading = "0.6.2"
+env_logger = "0.7.1"
+log = "0.4.11"

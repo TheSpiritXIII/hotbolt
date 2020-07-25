@@ -8,5 +8,5 @@ cargo build
 pushd examples
 cargo build
 popd
-cargo run examples/target/debug/counter.dll
+RUST_LOG=debug cargo run examples/target/debug/counter.dll
 ```

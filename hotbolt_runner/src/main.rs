@@ -1,27 +1,30 @@
+use log::{debug, info, error};
 use libloading as lib;
 use std::env;
 
 fn main() {
+	env_logger::init();
+
 	if let Some(lib_path) = env::args().skip(1).take(1).next() {
-		println!("Library: {}", lib_path);
+		debug!("Library: {}", lib_path);
 		if let Ok(lib) = lib::Library::new(lib_path) {
-			println!("Successfully loaded library");
+			info!("Successfully loaded library");
 			let entry_point = unsafe {
 				let func: Result<lib::Symbol<unsafe extern fn() -> ()>, _> = lib.get(b"main");
 				func
 			};
 			if let Ok(symbol) = entry_point {
-				println!("Loaded entry point.");
+				debug!("Loaded entry point.");
 				unsafe {
 					symbol();
 				}
 			} else {
-				println!("Error loading entry point.");
+				error!("Error loading entry point.");
 			}
 		} else {
-			println!("Unable to load library");
+			error!("Unable to load library");
 		}
 	} else {
-		println!("Must specify library path");
+		error!("Must specify library path");
 	}
 }
