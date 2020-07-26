@@ -1,8 +1,8 @@
 # hotbolt
-Lightweight set of tools for hot-reloading in Rust.
+Turbo-charge your development with hot-reloading.
 
-## Usage
-`hotbolt` works by transforming your application into a library.
+## Basic Usage
+`hotbolt` works by running your application as a library.
 
 Rename your `main.rs` to `lib.rs` and set your `Cargo.toml` file to build as a library:
 ```toml
@@ -31,13 +31,25 @@ fn main() {
 Finally, run `hotbolt-runner` with your library path as an argument:
 ```bash
 cargo build
-RUST_LOG=hotbolt_runner=debug hotbolt-runner target/debug/hotbolt_runnable.dll
+RUST_LOG=hotbolt_runner=debug hotbolt-runner
+```
+
+### Automatically Rebuilding
+You can use [`cargo-watch`](https://crates.io/crates/cargo-watch) for automatically rebuilding your library each time you make an edit for maximum efficiency!
+```bash
+cargo watch -x run
 ```
 
 ### Debug-only
 For some projects, such as games, hot deployment is only intended during the development lifecycle. In this case, you want to build both a binary and a library.
 
-To tell `Cargo.toml` to build both, you can keep your original `main.rs` and update your `Cargo.toml` as so:
+The `hotbolt` macros by default generates some glue that you don't need in a binary. All of this glue can be disabled through the `hotbolt_erase` feature. Add the feature in your `Cargo.toml`:
+```toml
+[features]
+hotbolt_erase = []
+```
+
+To tell `Cargo.toml` to continue building a library, you can keep your original `main.rs` and update your `Cargo.toml` as such:
 ```toml
 [lib]
 name = "hotbolt_runnable"
@@ -45,29 +57,19 @@ crate-type = ["cdylib"]
 path = "src/main.rs"
 ```
 
-Note, that you need to use a different name on your library than your binary. Additionally, `cargo` emits a warning that both targets are using the same entry point. To get around this, you can remove the `path` field in `Cargo.toml` and add a `lib.rs` file that re-exports everything from `main.rs`:
-```rust
-mod main;
-pub use main::*;
-```
+Note, that Cargo emits a warning if unless you use a different name on your library and your binary
 
-The `hotbolt` macros by default generates some glue that you don't need in a binary. All of this "glue" can be disabled through the `hotbolt_erase` feature. Add the feature in your `Cargo.toml`:
-```toml
-[features]
-hotbolt_erase = []
+Cargo also emits a warning when both targets are using the same entry point. To get around this, you can remove the `path` field in `Cargo.toml` and add a `lib.rs` file that re-exports everything from `main.rs`. To prevent additional warnings, make it a conditional module:
+```rust
+#[cfg(not(feature = "hotbolt_erase"))]
+mod main;
+#[cfg(not(feature = "hotbolt_erase"))]
+pub use main::*;
 ```
 
 Then build your binary with the feature:
 ```bash
 cargo build --release --features "hotbolt_erase"
-```
-
-The library target is still built with these configurations, but `hotbolt-runner` is incapable of utilitizing it. `cargo` also generates a warning on the `main` function being unused from the library. If you use a separate `lib.rs` file, you can make loading the main module conditional:
-```rust
-#[cfg(not(feature = "hotbolt_erase"))]
-mod main;
-#[cfg(not(feature = "hotbolt_erase"))]
-pub use main::*;
 ```
 
 ## Examples
@@ -77,5 +79,5 @@ cargo build
 pushd examples
 cargo build
 popd
-RUST_LOG=hotbolt_runner=debug cargo run examples/target/debug/hotbolt_runnable.dll
+RUST_LOG=hotbolt_runner=debug cargo run "examples/counter"
 ```

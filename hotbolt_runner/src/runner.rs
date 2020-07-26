@@ -1,4 +1,4 @@
-use std::sync::mpsc::Receiver;
+use std::{path::Path, sync::mpsc::Receiver};
 
 use libloading as lib;
 use log::{debug, error, info};
@@ -14,12 +14,12 @@ pub enum Event {
 	SetState(Box<[u8]>),
 }
 
-pub fn run(filepath: &str, reciever: Receiver<Event>) {
+pub fn run<P: AsRef<Path>>(path: P, reciever: Receiver<Event>) {
 	let mut _state: Option<Box<[u8]>> = None;
 	'lib_load: loop {
 		let load_error;
 
-		if let Ok(lib) = lib::Library::new(filepath) {
+		if let Ok(lib) = lib::Library::new(path.as_ref().as_os_str()) {
 			info!("Successfully loaded library");
 			// TODO: Call init symbol with state.
 

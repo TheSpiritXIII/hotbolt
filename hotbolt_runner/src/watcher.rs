@@ -1,21 +1,24 @@
 use std::{path::Path, process, sync::mpsc::Sender};
 
-use log::{debug, info, error};
+use log::{debug, error, info};
 use notify::event::{Event, EventKind};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
 use crate::runner::Event as RunnerEvent;
 
-pub fn watch(filepath: &str, sender: Sender<RunnerEvent>) -> Result<impl Sized, String> {
-	let path = Path::new(&filepath);
+pub fn watch<P: AsRef<Path>>(
+	filepath: P,
+	sender: Sender<RunnerEvent>,
+) -> Result<impl Sized, String> {
+	let path = filepath.as_ref();
 	if !path.is_file() {
-		return Err(format!("Input `{}` must be a file", filepath));
+		return Err(format!("Input `{}` must be a file", path.display()));
 	}
 	let dir = path
 		.parent()
-		.ok_or_else(|| return format!("Failed to get path directory of `{}`", filepath))?;
+		.ok_or_else(|| return format!("Failed to get path directory of `{}`", path.display()))?;
 
-	debug!("Started with library path: {}", filepath);
+	debug!("Started with library path: {}", path.display());
 
 	let watcher_result: Result<RecommendedWatcher, _> =
 		Watcher::new_immediate(move |res: Result<Event, _>| match res {
@@ -24,7 +27,7 @@ pub fn watch(filepath: &str, sender: Sender<RunnerEvent>) -> Result<impl Sized, 
 					EventKind::Create(_) => {
 						info!("File was created");
 						Some(RunnerEvent::Start)
-					},
+					}
 					EventKind::Modify(_) => Some(RunnerEvent::Reload),
 					EventKind::Remove(_) => {
 						info!("File was removed");
