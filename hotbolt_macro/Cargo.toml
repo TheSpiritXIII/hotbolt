@@ -1,9 +1,16 @@
 [package]
-name = "hotbolt"
+name = "hotbolt_macro"
 version = "0.1.0"
 authors = ["Daniel Hrabovcak <thespiritxiii@gmail.com>"]
 edition = "2018"
 
+[lib]
+proc-macro = true
+
 [dependencies]
+quote = "1.0.7"
 hotbolt_ffi = { path = "../hotbolt_ffi" }
-hotbolt_macro = { path = "../hotbolt_macro" }
+
+[dependencies.syn]
+version = "1.0.31"
+features = ["full"]

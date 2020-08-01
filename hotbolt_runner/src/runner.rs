@@ -1,5 +1,9 @@
-use std::{path::Path, sync::mpsc::Receiver};
+use std::{
+	path::Path,
+	sync::mpsc::{Receiver, Sender},
+};
 
+use hotbolt_ffi::{FfiServer, Server};
 use libloading::{Library, Symbol};
 use log::{debug, error, info};
 
@@ -15,12 +19,14 @@ pub enum Event {
 }
 
 struct HotboltLibSymbols<'a> {
-	run: Symbol<'a, unsafe extern "C" fn() -> ()>,
+	server: FfiServer,
+	run: Symbol<'a, unsafe extern "C" fn(server: FfiServer) -> ()>,
 }
 
 impl<'a> HotboltLibSymbols<'a> {
-	fn from(lib: &'a Library) -> Result<Self, String> {
+	fn from(lib: &'a Library, server: FfiServer) -> Result<Self, String> {
 		Ok(Self {
+			server,
 			run: Self::load_symbol(lib, hotbolt_ffi::ENTRY_MAIN)?,
 		})
 	}
@@ -34,35 +40,65 @@ impl<'a> HotboltLibSymbols<'a> {
 	}
 
 	fn run(&self) {
-		unsafe { (self.run)() }
+		unsafe { (self.run)(self.server) }
 	}
 }
 
-struct HotboltLib {
+struct HotboltLib<'a, T: Server> {
 	lib: Library,
+	server: &'a T,
 }
 
-impl HotboltLib {
-	fn load<P: AsRef<Path>>(path: P) -> Result<HotboltLib, String> {
+impl<'a, T: Server> HotboltLib<'a, T> {
+	fn load<P: AsRef<Path>>(path: P, server: &'a T) -> Result<Self, String> {
 		Library::new(path.as_ref().as_os_str())
-			.map(|lib| Self { lib })
+			.map(|lib| Self { lib, server })
 			.map_err(|_err| "Error loading entry point".to_owned())
 	}
 
-	fn symbols<'a>(&'a self) -> Result<HotboltLibSymbols<'a>, String> {
-		HotboltLibSymbols::from(&self.lib)
+	fn symbols(&'a self) -> Result<HotboltLibSymbols<'a>, String> {
+		HotboltLibSymbols::from(&self.lib, FfiServer::from(self.server))
 	}
 }
 
-pub fn run<P: AsRef<Path>>(path: P, reciever: Receiver<Event>) {
+struct SenderServer {
+	sender: Sender<Event>,
+}
+
+impl SenderServer {
+	// TODO: Implement Display for Event?
+	fn send(&self, event: Event, display: &'static str) {
+		self.sender.send(event).unwrap_or_else(|_err| {
+			panic!("hotbolt server `{}` message failed to send", display);
+		});
+	}
+}
+
+impl Server for SenderServer {
+	fn restart(&self) {
+		self.send(Event::Restart, "Restart");
+	}
+	fn reload(&self) {
+		self.send(Event::Reload, "Reload");
+	}
+	fn reload_with(&self, state: &[u8]) {
+		let box_slice = state.to_vec().into_boxed_slice();
+		self.send(Event::SetState(box_slice), "SetState");
+		self.send(Event::Reload, "Reload");
+	}
+}
+
+pub fn run<P: AsRef<Path>>(path: P, sender: Sender<Event>, reciever: Receiver<Event>) {
+	let server = SenderServer { sender };
+
 	let mut _state: Option<Box<[u8]>> = None;
 	'lib_load: loop {
 		let load_error;
 
-		match HotboltLib::load(&path) {
+		match HotboltLib::load(&path, &server) {
 			Ok(lib) => {
 				info!("Successfully loaded library");
-				
+
 				match lib.symbols() {
 					Ok(symbols) => {
 						debug!("Successfully loaded entry point");

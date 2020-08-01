@@ -34,7 +34,7 @@ fn main() {
 		});
 
 		let (sender, receiver) = channel();
-		let watcher = match watcher::watch(&lib_path, sender) {
+		let watcher = match watcher::watch(&lib_path, sender.clone()) {
 			Ok(watcher) => watcher,
 			Err(e) => {
 				error!("{}", e);
@@ -46,7 +46,7 @@ fn main() {
 		// We don't want it to deallocate and stop listening to events.
 		mem::forget(watcher);
 
-		runner::run(lib_path, receiver);
+		runner::run(lib_path, sender, receiver);
 	} else {
 		error!("Must specify library path");
 		process::exit(1);

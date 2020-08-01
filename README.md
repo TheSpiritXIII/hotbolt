@@ -1,6 +1,8 @@
 # hotbolt
 Turbo-charge your development with hot-reloading.
 
+NOTE: This tool is proof of concept and does not work.
+
 ## Basic Usage
 `hotbolt` works by running your application as a library.
 

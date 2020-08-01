@@ -124,8 +124,7 @@ name = "hotbolt"
 version = "0.1.0"
 dependencies = [
  "hotbolt_ffi 0.1.0",
- "quote 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "syn 1.0.35 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hotbolt_macro 0.1.0",
 ]
 
 [[package]]
@@ -144,6 +143,15 @@ dependencies = [
 [[package]]
 name = "hotbolt_ffi"
 version = "0.1.0"
+
+[[package]]
+name = "hotbolt_macro"
+version = "0.1.0"
+dependencies = [
+ "hotbolt_ffi 0.1.0",
+ "quote 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 1.0.35 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "humantime"

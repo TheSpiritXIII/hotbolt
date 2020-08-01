@@ -1,8 +1,10 @@
 [workspace]
 members = [
-	"hotbolt",
+	"hotbolt_ffi",
+	"hotbolt_macro",
 	"hotbolt_runner",
+	"hotbolt",
 ]
 exclude = [
-	"examples"
+	"examples",
 ]
