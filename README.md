@@ -57,7 +57,7 @@ crate-type = ["cdylib"]
 path = "src/main.rs"
 ```
 
-Note, that Cargo emits a warning if unless you use a different name on your library and your binary
+Note, that Cargo emits a warning unless you use a different name for your library and your binary.
 
 Cargo also emits a warning when both targets are using the same entry point. To get around this, you can remove the `path` field in `Cargo.toml` and add a `lib.rs` file that re-exports everything from `main.rs`. To prevent additional warnings, make it a conditional module:
 ```rust

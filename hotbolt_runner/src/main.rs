@@ -1,5 +1,5 @@
 pub mod cargo;
-pub mod library;
+pub mod platform;
 pub mod runner;
 pub mod watcher;
 

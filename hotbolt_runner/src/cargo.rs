@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::library;
+use crate::platform;
 
 #[derive(Deserialize)]
 struct Config {
@@ -77,7 +77,7 @@ pub fn cargo_target_path<P: AsRef<Path>>(path: &P) -> Result<PathBuf, String> {
 				path.as_ref().display()
 			)
 		})?;
-		if let Some(_) = cargo_path(parent_path) {
+		if cargo_path(parent_path).is_some() {
 			let target_workspace = parent_path.join("target");
 			if target_workspace.is_dir() {
 				Ok(target_workspace)
@@ -97,7 +97,7 @@ pub fn cargo_target_lib_path<P: AsRef<Path>>(dir: P, profile: &str) -> Result<Pa
 	let cargo_local = cargo_path(&dir);
 	if let Some(cargo_local_path) = cargo_local {
 		let lib_name = cargo_lib_name(&cargo_local_path)?;
-		let lib_filename = library::library_format(&lib_name);
+		let lib_filename = platform::library_format(&lib_name);
 		let target_path = cargo_target_path(&dir)?;
 		Ok(target_path.join(profile).join(lib_filename))
 	} else {

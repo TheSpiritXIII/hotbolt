@@ -36,7 +36,7 @@ pub fn watch<P: AsRef<Path>>(
 					_ => None,
 				};
 				if let Some(runner_event) = runner_event {
-					if let Err(_) = sender.send(runner_event) {
+					if sender.send(runner_event).is_err() {
 						error!("Unable to send runner event");
 						process::exit(1);
 					}
@@ -51,9 +51,9 @@ pub fn watch<P: AsRef<Path>>(
 	if let Ok(mut watcher) = watcher_result {
 		match watcher.watch(dir, RecursiveMode::NonRecursive) {
 			Ok(_) => Ok(watcher),
-			Err(_) => Err(format!("Failed to attach filesystem watcher to file")),
+			Err(_) => Err("Failed to attach filesystem watcher to file".to_string()),
 		}
 	} else {
-		Err(format!("Failed to instaniate filesystem watcher"))
+		Err("Failed to instaniate filesystem watcher".to_string())
 	}
 }
