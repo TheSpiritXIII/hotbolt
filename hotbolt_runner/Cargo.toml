@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 hotbolt_ffi = { path = "../hotbolt_ffi" }
+clap = "3.0.0-beta.1"
 env_logger = "0.7.1"
 libloading = "0.6.2"
 log = "0.4.11"

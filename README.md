@@ -36,6 +36,12 @@ cargo build
 RUST_LOG=hotbolt_runner=debug hotbolt-runner
 ```
 
+By default, this runs with the `debug` profile. To run with another one, specify it as such:
+```bash
+cargo build
+RUST_LOG=hotbolt_runner=debug hotbolt-runner --profile release
+```
+
 ### Automatically Rebuilding
 You can use [`cargo-watch`](https://crates.io/crates/cargo-watch) for automatically rebuilding your library each time you make an edit for maximum efficiency!
 ```bash
