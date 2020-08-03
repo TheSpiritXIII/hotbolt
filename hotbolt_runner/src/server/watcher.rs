@@ -4,11 +4,15 @@ use log::{debug, error, info};
 use notify::event::{Event, EventKind};
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
-use crate::runner::Event as RunnerEvent;
+pub enum WatcherEvent {
+	Created,
+	Changed,
+	Destroyed,
+}
 
 pub fn watch<P: AsRef<Path>>(
 	filepath: P,
-	sender: Sender<RunnerEvent>,
+	sender: Sender<WatcherEvent>,
 ) -> Result<impl Sized, String> {
 	let path = filepath.as_ref();
 	if !path.is_file() {
@@ -26,12 +30,12 @@ pub fn watch<P: AsRef<Path>>(
 				let runner_event = match event.kind {
 					EventKind::Create(_) => {
 						info!("File was created");
-						Some(RunnerEvent::Start)
+						Some(WatcherEvent::Created)
 					}
-					EventKind::Modify(_) => Some(RunnerEvent::Reload),
+					EventKind::Modify(_) => Some(WatcherEvent::Changed),
 					EventKind::Remove(_) => {
 						info!("File was removed");
-						None
+						Some(WatcherEvent::Destroyed)
 					}
 					_ => None,
 				};
