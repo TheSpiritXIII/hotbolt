@@ -15,7 +15,7 @@ fn main(server: impl Server, state: &[u8]) {
 		println!("Using default value: {}", COUNTER_DEFAULT);
 		COUNTER_DEFAULT
 	} else {
-		let value = isize::from_ne_bytes(state[0..8].try_into().unwrap());
+		let value = isize::from_ne_bytes(state[0..8].try_into().expect("Deserialize state"));
 		println!("Using provided value: {}", value);
 		value
 	};

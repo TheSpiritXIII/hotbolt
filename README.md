@@ -1,7 +1,7 @@
 # hotbolt
 Turbo-charge your development with hot-reloading.
 
-NOTE: This tool is proof of concept and does not work.
+NOTE: This tool is proof of concept and does not work. Do not use it!
 
 ## Basic Usage
 `hotbolt` works by running your application as a library.
@@ -79,6 +79,67 @@ Then build your binary with the feature:
 ```bash
 cargo build --release --features "hotbolt_erase"
 ```
+
+## Manually Restarting
+It is useful to bind restarting to a keyboard shortcut or another event within your application. Add the `Server` object as an argument to your entry point:
+```rust
+use std::thread;
+use std::time::Duration;
+
+use hotbolt::{hotbolt_entry_main, Server};
+
+#[hotbolt_entry_main]
+fn main(server: impl Server<()>) {
+	for i in 0..3 {
+		println!("Counter: {}: ", i);
+		thread::sleep(Duration::from_secs(1));
+	}
+	server.restart()
+}
+```
+
+## Reloading State
+hotbolt is capable of storing and reloading state between each each refresh. The only caveat is that hotbolt does not include any serialization mechanisms by default.
+
+Add a second variable that takes in a slice (must be in that position!). When the application starts up, the slice is empty. Finally, to tell hotbolt how to serialize, implement the `#[hotbolt_entry_state]` macro that returns a `Vec<u8>`:
+```rust
+use std::thread;
+use std::time::Duration;
+
+use hotbolt::{hotbolt_entry_main, Server};
+
+const COUNTER_DEFAULT: isize = 0;
+static COUNTER: AtomicIsize = AtomicIsize::new(COUNTER_DEFAULT);
+
+#[hotbolt_entry_main]
+fn main(server: impl Server<()>, state: &[u8]) {
+	println!("In main entry point");
+	let value = if state.is_empty() {
+		COUNTER_DEFAULT
+	} else {
+		// We subtract 1 because fetch_add returns the old value.
+		isize::from_ne_bytes(state[0..8].try_into().expect("Deserialize state")) - 1
+	};
+	COUNTER.store(value, Ordering::Relaxed);
+
+	loop {
+		let i = COUNTER.fetch_add(1, Ordering::Relaxed);
+		println!("Counter: {}: ", i);
+		thread::sleep(Duration::from_secs(1));
+	}
+	server.restart()
+}
+
+#[hotbolt_entry_state]
+fn state() -> Vec<u8> {
+	let value = COUNTER.load(Ordering::Relaxed);
+	value.to_ne_bytes().to_vec()
+}
+```
+
+For convenience, an alternative macro is provided that expects a `hotbolt::Client` trait implementation.
+
+At least, there should be.
 
 ## Examples
 To run the examples, first build the root workspace, then build the examples workspace and finally run whichever example you want with `hotbolt_runner`:

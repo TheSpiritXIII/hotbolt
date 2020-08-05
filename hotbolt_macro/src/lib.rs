@@ -27,6 +27,8 @@ pub fn hotbolt_entry_state(_attr: TokenStream, token_stream: TokenStream) -> Tok
 	}
 }
 
+// TODO: What to do if the main entry is named main (not allowed to our input)?
+// TODO: Clippy warning: recursing into entrypoint `main`
 #[proc_macro_attribute]
 pub fn hotbolt_entry_main(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
 	let input: Item = syn::parse_macro_input!(token_stream);

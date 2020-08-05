@@ -88,7 +88,7 @@ pub fn start<P: AsRef<Path>>(lib_path: P, address: &str) {
 							}
 							ServerMessage::Start(app_state) => {
 								let mut sl = state_thread.lock().expect("hi");
-								mem::replace(&mut *sl, app_state);
+								let _ = mem::replace(&mut *sl, app_state);
 								loaded_thread.store(true, Ordering::Relaxed);
 							}
 							ServerMessage::Close => {

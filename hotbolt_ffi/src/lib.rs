@@ -1,9 +1,9 @@
-use std::{ffi::c_void, os::raw::c_char, intrinsics::transmute};
+use std::{ffi::c_void, os::raw::c_char};
 
-pub static ENTRY_VERSION: &'static str = "hotbolt_entry_version";
-pub static ENTRY_INIT: &'static str = "hotbolt_entry_init";
-pub static ENTRY_MAIN: &'static str = "hotbolt_entry_main";
-pub static ENTRY_STATE: &'static str = "hotbolt_entry_state";
+pub static ENTRY_VERSION: &str = "hotbolt_entry_version";
+pub static ENTRY_INIT: &str = "hotbolt_entry_init";
+pub static ENTRY_MAIN: &str = "hotbolt_entry_main";
+pub static ENTRY_STATE: &str = "hotbolt_entry_state";
 
 #[repr(C)]
 pub struct SizedCharArray {
@@ -62,19 +62,19 @@ pub struct FfiServer {
 impl FfiServer {
 	pub fn from<T: Server>(server: &T) -> Self {
 		unsafe extern "C" fn server_ffi_restart<T: Server>(arg: *const c_void) {
-			let pointer: *const T = transmute(arg);
+			let pointer: *const T = arg as *const T;
 			let server: &dyn Server = &*pointer;
 			server.restart();
 		}
 
 		unsafe extern "C" fn server_ffi_reload<T: Server>(arg: *const c_void) {
-			let pointer: *const T = transmute(arg);
+			let pointer: *const T = arg as *const T;
 			let server: &dyn Server = &*pointer;
 			server.reload();
 		}
 
 		unsafe extern "C" fn server_ffi_reload_with<T: Server>(arg: *const c_void, state: SizedCharArray) {
-			let pointer: *const T = transmute(arg);
+			let pointer: *const T = arg as *const T;
 			let server: &dyn Server = &*pointer;
 			server.reload_with(state.as_u8_slice());
 		}
