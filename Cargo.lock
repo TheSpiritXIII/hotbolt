@@ -211,6 +211,7 @@ name = "hotbolt_macro"
 version = "0.1.0"
 dependencies = [
  "hotbolt_ffi 0.1.0",
+ "proc-macro2 1.0.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 1.0.35 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

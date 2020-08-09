@@ -8,8 +8,9 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
+hotbolt_ffi = {path = "../hotbolt_ffi"}
+proc-macro2 = "1.0.19"
 quote = "1.0.7"
-hotbolt_ffi = { path = "../hotbolt_ffi" }
 
 [dependencies.syn]
 version = "1.0.31"
