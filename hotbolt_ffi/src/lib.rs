@@ -1,14 +1,25 @@
-use std::io::{Read, Write};
-use std::{ffi::c_void, os::raw::c_char};
+use std::{
+	ffi::c_void,
+	io::{Read, Write},
+	os::raw::c_char,
+};
 
-pub static ENTRY_VERSION: &str = "hotbolt_entry_version";
-pub static ENTRY_IS_COMPATIBLE: &str = "hotbolt_entry_is_compatible";
+// # NEW ENTRIES #
+pub static ENTRY_CLIENT_NEW: &str = "hotbolt_entry_client_new";
+pub static ENTRY_CLIENT_DROP: &str = "hotbolt_entry_client_get";
+/*
+TODO: What are the security implications of this?
+Maybe we can have the client potentially be another (unreloadable) library?
+Would anybody want these for beter logic separation/performance/ease?
+*/
+pub static ENTRY_CLIENT_VERSION: &str = "hotbolt_entry_client_version";
+pub static ENTRY_CLIENT_COMPATIBLE: &str = "hotbolt_entry_client_compatible";
 
-pub static ENTRY_INIT: &str = "hotbolt_entry_init";
-pub static ENTRY_MAIN: &str = "hotbolt_entry_main";
-pub static ENTRY_DESTROY: &str = "hotbolt_entry_destroy";
+pub static ENTRY_STATE_NEW: &str = "hotbolt_entry_state_new";
+pub static ENTRY_STATE_DROP: &str = "hotbolt_entry_state_drop";
+pub static ENTRY_STATE_GET: &str = "hotbolt_entry_state_get";
 
-pub static ENTRY_STATE: &str = "hotbolt_entry_state";
+pub static ENTRY_RUN: &str = "hotbolt_entry_run";
 
 #[repr(C)]
 pub struct SizedCharArray {
@@ -111,7 +122,7 @@ impl Server for FfiServer {
 /// Serializes and deserializes the application state.
 pub trait Serializer<T> {
 	// Writes the given value into the writer.
-	fn serialize<W: Write>(writer: &W, value: T) -> Result<(), ()>;
+	fn serialize<W: Write>(writer: &W, value: &T) -> Result<(), ()>;
 
 	// Reads the given value as T from the reader.
 	fn deserialize<R: Read>(reader: R) -> Result<T, ()>;
@@ -119,10 +130,10 @@ pub trait Serializer<T> {
 
 pub trait Compatibility {
 	// Returns a static string indicating the version number of the application.
-	fn version() -> &'static str;
+	fn version() -> &'static [u8];
 
 	// Returns true if the given other version is compatible with this one.
-	fn is_compatible(other: &str) -> bool {
+	fn is_compatible(other: &[u8]) -> bool {
 		Self::version() == other
 	}
 }
@@ -134,13 +145,10 @@ pub trait Client {
 	type Compatibility: Compatibility;
 
 	/// Creates the client. Only called on initialization or if the client is incompatible with the last run client.
-	fn create() -> Self;
+	fn new() -> Self;
 
 	/// The main entry point for the application.
-	fn run(&mut self, server: impl Server, state: Option<Self::T>);
-
-	/// Returns the current application state.
-	fn destroy(self);
+	fn run(&mut self, server: impl Server, state: &Box<Self::T>);
 
 	/// Returns the current application state.
 	fn state(&self) -> Option<Self::T>;
@@ -148,50 +156,77 @@ pub trait Client {
 
 /// A low level version of `Client`.
 pub trait FfiClient {
-	fn run(&mut self, server: FfiServer, state: SizedCharArray);
-	fn destroy(self);
-	fn state(&self) -> SizedCharArray;
-	fn version() -> *const u8;
-	fn is_compatible(other: *const u8) -> bool;
+	fn client_new() -> *const c_void;
+	fn client_drop(client_ptr: *mut c_void);
+
+	fn client_version() -> SizedCharArray;
+	fn client_compatible(other: SizedCharArray) -> bool;
+
+	fn state_new(state_serialized: SizedCharArray) -> *const c_void;
+	fn state_drop(state_ptr: *mut c_void);
+	fn state_serialized(state_ptr: *const c_void) -> SizedCharArray;
+
+	fn run(&mut self, server: FfiServer, state_ptr: *const c_void);
 }
 
 impl<T: Client> FfiClient for T {
-	fn run(&mut self, server: FfiServer, state: SizedCharArray) {
-		let opt = if !state.is_empty() {
-			T::Serializer::deserialize(state.as_u8_slice()).ok()
-		} else {
-			None
+	fn client_new() -> *const c_void {
+		let client = Box::new(T::new());
+		Box::into_raw(client) as *const c_void
+	}
+
+	fn client_drop(client_ptr: *mut c_void) {
+		unsafe { Box::from_raw(client_ptr as *mut T) };
+	}
+
+	fn client_version() -> SizedCharArray {
+		let version = T::Compatibility::version();
+		let char_array = SizedCharArray {
+			array: version.as_ptr() as *const c_char,
+			len: version.len(),
 		};
-		Client::run(self, server, opt);
+		std::mem::forget(version);
+		char_array
 	}
 
-	fn destroy(self) {
-		self.destroy();
+	fn client_compatible(other: SizedCharArray) -> bool {
+		T::Compatibility::is_compatible(other.as_u8_slice());
+		todo!();
 	}
 
-	fn state(&self) -> SizedCharArray {
-		if let Some(state) = Client::state(self) {
-			let v: Vec<u8> = Vec::new();
-			if T::Serializer::serialize(&v, state).is_ok() {
-				let char_array = SizedCharArray {
-					array: v.as_ptr() as *const c_char,
-					len: v.len(),
-				};
-				std::mem::forget(v);
-				char_array
-			} else {
-				SizedCharArray::empty()
-			}
+	fn state_new(state_serialized: SizedCharArray) -> *const c_void {
+		if let Some(state) = T::Serializer::deserialize(state_serialized.as_u8_slice()).ok() {
+			let state_ptr = Box::new(state);
+			Box::into_raw(state_ptr) as *const c_void
 		} else {
-			SizedCharArray::empty()
+			std::ptr::null()
 		}
 	}
 
-	fn version() -> *const u8 {
-		T::Compatibility::version().as_ptr()
+	fn state_drop(state_ptr: *mut c_void) {
+		unsafe { Box::from_raw(state_ptr as *mut T::T) };
 	}
 
-	fn is_compatible(_other: *const u8) -> bool {
-		todo!()
+	fn state_serialized(state_ptr: *const c_void) -> SizedCharArray {
+		let state: Box<T::T> = unsafe { Box::from_raw(state_ptr as *mut T::T) };
+		let vec: Vec<u8> = Vec::new();
+		let value = if T::Serializer::serialize(&vec, &state).is_ok() {
+			let char_array = SizedCharArray {
+				array: vec.as_ptr() as *const c_char,
+				len: vec.len(),
+			};
+			std::mem::forget(vec);
+			char_array
+		} else {
+			SizedCharArray::empty()
+		};
+		Box::leak(state);
+		value
+	}
+
+	fn run(&mut self, server: FfiServer, state_ptr: *const c_void) {
+		let state: Box<T::T> = unsafe { Box::from_raw(state_ptr as *mut T::T) };
+		Client::run(self, server, &state);
+		Box::leak(state);
 	}
 }

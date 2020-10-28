@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 use std::thread;
 use std::time::Duration;
 
-use hotbolt::{hotbolt_entry_main, hotbolt_entry_state, Server};
+use hotbolt::{hotbolt_entry_main, hotbolt_entry_state_get, Server};
 
 const COUNTER_DEFAULT: isize = 3;
 static COUNTER: AtomicIsize = AtomicIsize::new(COUNTER_DEFAULT);
@@ -26,15 +26,17 @@ fn main(server: impl Server, state: &[u8]) {
 		let value = COUNTER.fetch_sub(1, Ordering::Relaxed);
 		println!("Counter: {}", value);
 		if value == 0 {
+			println!("Trigger reload");
 			server.reload();
 		} else if value == -COUNTER_DEFAULT {
+			println!("Trigger restart");
 			server.restart();
 		}
 		thread::sleep(Duration::from_secs(1));
 	}
 }
 
-#[hotbolt_entry_state]
+#[hotbolt_entry_state_get]
 fn state() -> Vec<u8> {
 	let value = COUNTER.load(Ordering::Relaxed);
 	value.to_ne_bytes().to_vec()

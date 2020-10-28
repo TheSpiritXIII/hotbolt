@@ -1,7 +1,7 @@
 # hotbolt
 Turbo-charge your development with hot-reloading.
 
-NOTE: This tool is proof of concept and does not work. Do not use it!
+NOTE: This tool is proof of concept and does not work yet. DO NOT USE IT!
 
 ## Basic Usage
 `hotbolt` works by running your application as a library.
@@ -30,44 +30,58 @@ fn main() {
 }
 ```
 
-Finally, run `hotbolt-runner` with your library path as an argument:
+Finally, run `hotbolt-runner`:
 ```bash
 cargo build
 RUST_LOG=hotbolt_runner=debug hotbolt-runner
 ```
 
-By default, this runs with the `debug` profile. To run with another one, specify it as such:
+And viola! Each time your library changes, the runner will automatically detect and restart the application.
+
+### CLI Options
+By default, the runner uses the `debug` profile. To run with another profile, specify it using the `--profile` flag:
 ```bash
 cargo build
 RUST_LOG=hotbolt_runner=debug hotbolt-runner --profile release
 ```
 
+As an alternative, you can specify the library directly using `--file`. The equivalent to the above on Windows would be:
+```bash
+cargo build
+RUST_LOG=hotbolt_runner=debug hotbolt-runner --file target/debug/app.dll
+```
+
+The hotbolt runner supports `--help` for additional runner features and usage tips:
+```bash
+cargo build
+RUST_LOG=hotbolt_runner=debug hotbolt-runner --help
+```
+
 ### Automatically Rebuilding
-You can use [`cargo-watch`](https://crates.io/crates/cargo-watch) for automatically rebuilding your library each time you make an edit for maximum efficiency!
+You can use [`cargo-watch`](https://crates.io/crates/cargo-watch) for automatically rebuilding your library each time you make an edit for maximum efficiency:
 ```bash
 cargo watch -x run
 ```
 
-### Debug-only
-For some projects, such as games, hot deployment is only intended during the development lifecycle. In this case, you want to build both a binary and a library.
+### Debug-only Lifecycle
+For some projects, such as games, hot deployment is only intended during the development lifecycle. You can build both a binary and a library for the release and debug builds respectically.
 
-The `hotbolt` macros by default generates some glue that you don't need in a binary. All of this glue can be disabled through the `hotbolt_erase` feature. Add the feature in your `Cargo.toml`:
+The `hotbolt` macros can be effectively disabled through the `hotbolt_erase` feature. Add the `hotbolt_erase` feature in your `Cargo.toml` and the macro becomes a no-op:
 ```toml
 [features]
 hotbolt_erase = []
 ```
 
-To tell `Cargo.toml` to continue building a library, you can keep your original `main.rs` and update your `Cargo.toml` as such:
+To tell `Cargo.toml` to build a library, you can keep your original `main.rs` and update your `Cargo.toml`:
 ```toml
 [lib]
+# Need to populate name or else Cargo emits a warning.
 name = "hotbolt_runnable"
 crate-type = ["cdylib"]
 path = "src/main.rs"
 ```
 
-Note, that Cargo emits a warning unless you use a different name for your library and your binary.
-
-Cargo also emits a warning when both targets are using the same entry point. To get around this, you can remove the `path` field in `Cargo.toml` and add a `lib.rs` file that re-exports everything from `main.rs`. To prevent additional warnings, make it a conditional module:
+Cargo emits a warning when both targets (binary and library) are using the same entry point. As an alternative, you can omit the `path` field in `Cargo.toml` and add a `lib.rs` file that re-exports everything from `main.rs`. To prevent additional warnings, make it a conditional module:
 ```rust
 #[cfg(not(feature = "hotbolt_erase"))]
 mod main;
@@ -75,13 +89,13 @@ mod main;
 pub use main::*;
 ```
 
-Then build your binary with the feature:
+Finally, build your binary:
 ```bash
 cargo build --release --features "hotbolt_erase"
 ```
 
 ## Manually Restarting
-It is useful to bind restarting to a keyboard shortcut or another event within your application. Add the `Server` object as an argument to your entry point:
+It is useful to bind restarting to a keyboard shortcut or another event within your application. Your application can communicate with the runner application through the `Server` object which can be added an argument to your entry point:
 ```rust
 use std::thread;
 use std::time::Duration;
@@ -137,12 +151,21 @@ fn state() -> Vec<u8> {
 }
 ```
 
-For convenience, an alternative macro is provided that expects a `hotbolt::Client` trait implementation.
+For convenience, an macro is provided that expects a `hotbolt::Client` trait implementation. This is a work in progress.
 
-At least, there should be.
+## Hard vs Soft Reloading
+All reloading thus far has been hard reloading -- the entire application stops and restarts (but with the old state). Some applications, such as servers, have long running TCP connections or use some sort of protocol or API that they don't want to reconnect each time they restart the server. If the application hard reloads, you would need to reconnect each time. Meanwhile games or other GUI application display a window on the screen. Hard reloading those types of applications cause the window to close and reopen, flickering and pointlessly reinitiliazing the surface.
+
+Soft reloading allows the application to partially shut down. By dividing your application into two parts, you can avoid reloading the code that stays mostly immutable and continue reloading only the parts of your code that contains logic. Effectively, the runner has 2 versions of your library loaded.
+
+This is a work in progress.
+
+Notice how I used the word "mostly immutable" earlier to describe the long-running part of your application state. Sometimes it does change and you want to detect that and hard reload. hotbolt supports this by allowing you to specify a version string. Like serialization, hotbolt is minimal and doesn't define what "compatibility" for you (for example, SemVer), so that is also something you must implement (although various helpers exist).
+
+This is a work in progress.
 
 ## Examples
-To run the examples, first build the root workspace, then build the examples workspace and finally run whichever example you want with `hotbolt_runner`:
+To run the examples in this repository, first build the root workspace, then build the examples workspace and finally run whichever example you want with `hotbolt_runner`:
 ```bash
 cargo build
 pushd examples

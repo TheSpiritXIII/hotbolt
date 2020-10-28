@@ -1,8 +1,12 @@
 use std::{path::Path, process, sync::mpsc::Sender};
 
 use log::{debug, error, info};
-use notify::event::{Event, EventKind};
-use notify::{RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{
+	event::{Event, EventKind},
+	RecommendedWatcher,
+	RecursiveMode,
+	Watcher,
+};
 
 pub enum WatcherEvent {
 	Created,

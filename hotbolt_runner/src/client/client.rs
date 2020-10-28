@@ -1,11 +1,15 @@
 use std::{
-	io, mem,
+	io,
+	mem,
 	net::TcpStream,
 	path::Path,
 	process,
 	sync::{
 		atomic::{AtomicBool, Ordering},
-		mpsc, Arc, Mutex, RwLock,
+		mpsc,
+		Arc,
+		Mutex,
+		RwLock,
 	},
 	thread,
 };
@@ -39,7 +43,7 @@ pub fn start<P: AsRef<Path>>(lib_path: P, address: &str) {
 	let library: Arc<RwLock<Option<HotboltLib>>> = Arc::new(RwLock::new(None));
 	let state: Arc<Mutex<Option<Box<[u8]>>>> = Arc::new(Mutex::new(None));
 	let loaded = Arc::new(AtomicBool::new(false));
-	
+
 	let library_thread = library.clone();
 	let state_thread = state.clone();
 	let loaded_thread = loaded.clone();

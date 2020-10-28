@@ -1,5 +1,12 @@
 use hotbolt_ffi::{
-	ENTRY_DESTROY, ENTRY_INIT, ENTRY_IS_COMPATIBLE, ENTRY_MAIN, ENTRY_STATE, ENTRY_VERSION,
+	ENTRY_CLIENT_COMPATIBLE,
+	ENTRY_CLIENT_DROP,
+	ENTRY_CLIENT_NEW,
+	ENTRY_CLIENT_VERSION,
+	ENTRY_RUN,
+	ENTRY_STATE_DROP,
+	ENTRY_STATE_GET,
+	ENTRY_STATE_NEW,
 };
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
@@ -18,13 +25,8 @@ pub fn hotbolt_main(_attr: TokenStream, token_stream: TokenStream) -> TokenStrea
 	let expanded = quote! {
 		type HotboltEntryClient: hotbolt::Client = #client_name;
 
-		#[hotbolt::hotbolt_entry_state]
-		fn hotbolt_auto_version() {
-			todo!();
-		}
-
-		#[hotbolt::hotbolt_entry_is_compatible]
-		fn hotbolt_auto_is_compatible() {
+		#[hotbolt::hotbolt_entry_compatible]
+		fn hotbolt_auto_compatible() {
 			todo!();
 		}
 
@@ -43,7 +45,7 @@ pub fn hotbolt_main(_attr: TokenStream, token_stream: TokenStream) -> TokenStrea
 			todo!();
 		}
 
-		#[hotbolt::hotbolt_entry_state]
+		#[hotbolt::hotbolt_entry_state_get]
 		fn hotbolt_auto_state() -> Vec<u8> {
 			todo!();
 		}
@@ -94,7 +96,7 @@ pub fn hotbolt_entry_version(_attr: TokenStream, token_stream: TokenStream) -> T
 		"hotbolt_entry_version",
 		token_stream,
 		|| {
-			let ident = format_ident!("{}", ENTRY_VERSION);
+			let ident = format_ident!("{}", ENTRY_CLIENT_VERSION);
 			quote! {
 				fn #ident()
 			}
@@ -109,12 +111,12 @@ pub fn hotbolt_entry_version(_attr: TokenStream, token_stream: TokenStream) -> T
 }
 
 #[proc_macro_attribute]
-pub fn hotbolt_entry_is_compatible(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+pub fn hotbolt_entry_compatible(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
 	wrap_method(
-		"hotbolt_entry_is_compatible",
+		"hotbolt_entry_compatible",
 		token_stream,
 		|| {
-			let ident = format_ident!("{}", ENTRY_IS_COMPATIBLE);
+			let ident = format_ident!("{}", ENTRY_CLIENT_COMPATIBLE);
 			quote! {
 				fn #ident()
 			}
@@ -134,8 +136,9 @@ pub fn hotbolt_entry_init(_attr: TokenStream, token_stream: TokenStream) -> Toke
 		"hotbolt_entry_init",
 		token_stream,
 		|| {
+			let ident = format_ident!("{}", ENTRY_CLIENT_NEW);
 			quote! {
-				fn #ENTRY_INIT()
+				fn #ident()
 			}
 		},
 		|function_ident| {
@@ -153,8 +156,9 @@ pub fn hotbolt_entry_destroy(_attr: TokenStream, token_stream: TokenStream) -> T
 		"hotbolt_entry_destroy",
 		token_stream,
 		|| {
+			let ident = format_ident!("{}", ENTRY_CLIENT_DROP);
 			quote! {
-				fn #ENTRY_DESTROY()
+				fn #ident()
 			}
 		},
 		|function_ident| {
@@ -173,7 +177,7 @@ pub fn hotbolt_entry_main(_attr: TokenStream, token_stream: TokenStream) -> Toke
 	let input: Item = syn::parse_macro_input!(token_stream);
 	if let Item::Fn(input_function) = &input {
 		let input_function_name = &input_function.sig.ident;
-		let entry_name = format_ident!("{}", ENTRY_MAIN);
+		let entry_name = format_ident!("{}", ENTRY_RUN);
 
 		let input_count = input_function.sig.inputs.len();
 		let args: Vec<(Ident, syn::Path, _)> = vec![
@@ -210,7 +214,7 @@ pub fn hotbolt_entry_main(_attr: TokenStream, token_stream: TokenStream) -> Toke
 
 		let state_entry = if input_count < 2 {
 			quote! {
-				#[hotbolt::hotbolt_entry_state]
+				#[hotbolt::hotbolt_entry_state_get]
 				fn hotbolt_expanded_entry_state() -> Vec<u8> {
 					Vec::new()
 				}
@@ -231,19 +235,66 @@ pub fn hotbolt_entry_main(_attr: TokenStream, token_stream: TokenStream) -> Toke
 		};
 
 		TokenStream::from(expanded)
+		// let value = format!("{}", expanded);
+		// TokenStream::from(quote! {
+		// 	#[doc = #value]
+		// 	///
+		// 	#input
+		// })
 	} else {
 		panic!("#[hotbolt_entry_main] is intended on a function");
 	}
 }
 
 #[proc_macro_attribute]
-pub fn hotbolt_entry_state(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+pub fn hotbolt_entry_state_new(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
 	wrap_method(
-		"hotbolt_entry_state",
+		"hotbolt_entry_state_new",
 		token_stream,
 		|| {
+			let ident = format_ident!("{}", ENTRY_STATE_NEW);
 			quote! {
-				fn #ENTRY_STATE() -> hotbolt::internal::SizedCharArray
+				fn #ident() -> hotbolt::internal::SizedCharArray
+			}
+		},
+		|function_ident| {
+			let ident = &function_ident.ident;
+			quote! {
+				hotbolt::internal::SizedCharArray::from_slice(&#ident())
+			}
+		},
+	)
+}
+
+#[proc_macro_attribute]
+pub fn hotbolt_entry_state_drop(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	wrap_method(
+		"hotbolt_entry_state_drop",
+		token_stream,
+		|| {
+			let ident = format_ident!("{}", ENTRY_STATE_DROP);
+			quote! {
+				fn #ident() -> hotbolt::internal::SizedCharArray
+			}
+		},
+		|function_ident| {
+			let ident = &function_ident.ident;
+			quote! {
+				hotbolt::internal::SizedCharArray::from_slice(&#ident())
+			}
+		},
+	)
+}
+
+#[proc_macro_attribute]
+pub fn hotbolt_entry_state_get(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	wrap_method(
+		"hotbolt_entry_state_get",
+		token_stream,
+		|| {
+			let ident = format_ident!("{}", ENTRY_STATE_GET);
+			quote! {
+				fn #ident() -> hotbolt::internal::SizedCharArray
 			}
 		},
 		|function_ident| {

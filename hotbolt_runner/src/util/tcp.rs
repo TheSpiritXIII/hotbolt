@@ -1,6 +1,11 @@
 use serde::{de::DeserializeOwned, Serialize};
-use std::io::{Read, Write};
-use std::{io, marker::PhantomData, net::TcpStream, thread};
+use std::{
+	io,
+	io::{Read, Write},
+	marker::PhantomData,
+	net::TcpStream,
+	thread,
+};
 
 // TODO: Does mio, tokio or async_std provide anything that could help me replace this?
 pub fn io_blocking<T, F: FnMut() -> io::Result<T>>(mut f: F) -> io::Result<T> {
