@@ -1,12 +1,4 @@
-use std::{
-	env,
-	io,
-	mem,
-	net::TcpListener,
-	path::Path,
-	process::{self, Child, Command, Stdio},
-	sync::mpsc::{self, TryRecvError},
-};
+use std::{env, io, mem, net::TcpListener, path::Path, fs, process::{self, Child, Command, Stdio}, sync::mpsc::{self, TryRecvError}};
 
 use log::{error, info};
 
@@ -45,20 +37,13 @@ fn send<'a>(
 	}
 }
 
-pub fn start<P: AsRef<Path>>(lib_path: P, address: &str, cli: Cli) {
+pub fn start<P1: AsRef<Path>, P2: AsRef<Path>>(lib_path: P1, lib_path_normalized: P2, address: &str, cli: Cli) {
 	let (watcher_sender, watcher_receiver) = mpsc::channel();
 
-	let watcher = match watcher::watch(&lib_path, watcher_sender) {
-		Ok(watcher) => watcher,
-		Err(e) => {
-			error!("{}", e);
-			process::exit(1);
-		}
-	};
-
-	// We need watcher in scope for the entire application lifecycle.
-	// We don't want it to deallocate and stop listening to events.
-	mem::forget(watcher);
+	if let Err(e) = watcher::watch_poll(&lib_path, watcher_sender, std::time::Duration::from_secs(2)) {
+		error!("{}", e);
+		process::exit(1);
+	}
 
 	let mut app_state = None;
 	'spawn: loop {
@@ -146,13 +131,22 @@ pub fn start<P: AsRef<Path>>(lib_path: P, address: &str, cli: Cli) {
 
 		loop {
 			if restarting && file_exists {
-				if !send(
-					&mut message_stream,
-					&mut process,
-					ServerMessage::Start(app_state.clone()),
-				) {
-					continue 'spawn;
+				// TODO: This if statement only works if the client is listening (which it might not be).
+				// We should kill after a timeout.
+				let _ = process.kill();
+
+				// TODO: This should live elsewhere.
+				if let Err(e) = fs::copy(&lib_path, &lib_path_normalized) {
+					error!("{}", e);
+					error!("Unable to copy library file. Aborting");
 				}
+				// if !send(
+				// 	&mut message_stream,
+				// 	&mut process,
+				// 	ServerMessage::Start(app_state.clone()),
+				// ) {
+					continue 'spawn;
+				// }
 			}
 
 			match watcher_receiver.try_recv() {

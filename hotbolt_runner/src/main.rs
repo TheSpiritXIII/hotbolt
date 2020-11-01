@@ -4,9 +4,10 @@ pub mod server;
 pub mod util;
 
 use std::process;
+use std::fs;
 
 use common::Cli;
-use log::error;
+use log::{error, debug};
 
 fn main() {
 	env_logger::init();
@@ -21,9 +22,11 @@ fn main() {
 
 	let address = format!("{}:{}", &cli.host, &cli.port);
 
+	let lib_path_normalized = lib_path.with_extension("hotbolt");
 	if !cli.client {
-		server::start(lib_path, &address, cli);
+		server::start(lib_path, lib_path_normalized, &address, cli);
 	} else {
-		client::start(lib_path, &address);
+		debug!("Starting client with: {:?}", &lib_path_normalized);
+		client::start(lib_path_normalized, &address);
 	}
 }

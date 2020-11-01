@@ -1,23 +1,79 @@
-use std::{path::Path, process, sync::mpsc::Sender};
+use std::{path::Path, process, sync::mpsc::Sender, thread, time::Duration};
 
 use log::{debug, error, info};
 use notify::{
 	event::{Event, EventKind},
-	RecommendedWatcher,
-	RecursiveMode,
-	Watcher,
+	RecommendedWatcher, RecursiveMode, Watcher,
 };
 
+#[derive(Debug)]
 pub enum WatcherEvent {
 	Created,
 	Changed,
 	Destroyed,
 }
 
-pub fn watch<P: AsRef<Path>>(
+pub fn watch_poll<P: AsRef<Path>>(
 	filepath: P,
 	sender: Sender<WatcherEvent>,
-) -> Result<impl Sized, String> {
+	interval: Duration,
+) -> Result<(), String> {
+	let path = filepath.as_ref().to_owned();
+	if !path.is_file() {
+		return Err(format!("Input `{}` must be a file", path.display()));
+	}
+
+	let metadata = path
+		.metadata()
+		.map_err(|_| format!("Input `{}` could not get metadata", path.display()))?;
+	let last_modified_time = metadata.modified().map_err(|_| {
+		format!(
+			"Input `{}` could not get last modified time",
+			path.display()
+		)
+	})?;
+
+	thread::spawn(move || {
+		let mut last_modified = Some(last_modified_time);
+		loop {
+			let event = if let Ok(metadata) = path.metadata() {
+				if let Ok(modified_time) = metadata.modified() {
+					if let Some(last_modified_time) = last_modified {
+						if last_modified_time != modified_time {
+							last_modified = Some(modified_time);
+							Some(WatcherEvent::Changed)
+						} else {
+							None
+						}
+					} else {
+						last_modified = Some(modified_time);
+						Some(WatcherEvent::Created)
+					}
+				} else {
+					Some(WatcherEvent::Destroyed)
+				}
+			} else {
+				Some(WatcherEvent::Destroyed)
+			};
+
+			if let Some(runner_event) = event {
+				error!("Sending message: {:?}", runner_event);
+				if sender.send(runner_event).is_err() {
+					error!("Unable to send runner event");
+					process::exit(1);
+				}
+			}
+
+			thread::sleep(interval);
+		}
+	});
+	Ok(())
+}
+
+pub fn watch_notify<P: AsRef<Path>>(
+	filepath: P,
+	sender: Sender<WatcherEvent>,
+) -> Result<(), String> {
 	let path = filepath.as_ref();
 	if !path.is_file() {
 		return Err(format!("Input `{}` must be a file", path.display()));
@@ -58,7 +114,7 @@ pub fn watch<P: AsRef<Path>>(
 
 	if let Ok(mut watcher) = watcher_result {
 		match watcher.watch(dir, RecursiveMode::NonRecursive) {
-			Ok(_) => Ok(watcher),
+			Ok(_) => Ok(()),
 			Err(_) => Err("Failed to attach filesystem watcher to file".to_string()),
 		}
 	} else {

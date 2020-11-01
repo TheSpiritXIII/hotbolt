@@ -1,7 +1,7 @@
 # hotbolt
 Turbo-charge your development with hot-reloading.
 
-NOTE: This tool is proof of concept and does not work yet. DO NOT USE IT!
+NOTE: This tool is proof of concept and constantly changing. DO NOT USE IT [yet]!
 
 ## Basic Usage
 `hotbolt` works by running your application as a library.
@@ -60,7 +60,7 @@ RUST_LOG=hotbolt_runner=debug hotbolt-runner --help
 ### Automatically Rebuilding
 You can use [`cargo-watch`](https://crates.io/crates/cargo-watch) for automatically rebuilding your library each time you make an edit for maximum efficiency:
 ```bash
-cargo watch -x run
+cargo watch -x build
 ```
 
 ### Debug-only Lifecycle
@@ -156,11 +156,11 @@ For convenience, an macro is provided that expects a `hotbolt::Client` trait imp
 ## Hard vs Soft Reloading
 All reloading thus far has been hard reloading -- the entire application stops and restarts (but with the old state). Some applications, such as servers, have long running TCP connections or use some sort of protocol or API that they don't want to reconnect each time they restart the server. If the application hard reloads, you would need to reconnect each time. Meanwhile games or other GUI application display a window on the screen. Hard reloading those types of applications cause the window to close and reopen, flickering and pointlessly reinitiliazing the surface.
 
-Soft reloading allows the application to partially shut down. By dividing your application into two parts, you can avoid reloading the code that stays mostly immutable and continue reloading only the parts of your code that contains logic. Effectively, the runner has 2 versions of your library loaded.
+Soft reloading allows the application to partially shut down. By dividing your application into two parts, you can avoid reloading the code that stays mostly static and continue reloading only the parts of your code that contains logic. Effectively, the runner has 2 versions of your library loaded.
 
 This is a work in progress.
 
-Notice how I used the word "mostly immutable" earlier to describe the long-running part of your application state. Sometimes it does change and you want to detect that and hard reload. hotbolt supports this by allowing you to specify a version string. Like serialization, hotbolt is minimal and doesn't define what "compatibility" for you (for example, SemVer), so that is also something you must implement (although various helpers exist).
+Notice how I used the word "mostly static" earlier to describe the long-running part of your application state. Sometimes it does change and you want to detect that and perform a hard reload. hotbolt supports this by allowing you to specify a version string. Like serialization, hotbolt is minimal and doesn't define what "compatibility" for you (for example, SemVer), so that is also something you must implement (although various helpers exist).
 
 This is a work in progress.
 
