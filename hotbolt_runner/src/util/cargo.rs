@@ -3,9 +3,8 @@ use std::{
 	path::{Path, PathBuf},
 };
 
+use libloading::library_filename;
 use serde::Deserialize;
-
-use crate::util::platform;
 
 #[derive(Deserialize)]
 struct Config {
@@ -99,7 +98,7 @@ pub fn cargo_target_lib_path<P: AsRef<Path>>(dir: P, profile: &str) -> Result<Pa
 	let cargo_local = cargo_path(&dir);
 	if let Some(cargo_local_path) = cargo_local {
 		let lib_name = cargo_lib_name(&cargo_local_path)?;
-		let lib_filename = platform::library_format(&lib_name);
+		let lib_filename = library_filename(&lib_name);
 		let target_path = cargo_target_path(&dir)?;
 		Ok(target_path.join(profile).join(lib_filename))
 	} else {
