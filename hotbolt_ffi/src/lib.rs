@@ -4,6 +4,16 @@ use std::{
 	os::raw::c_char,
 };
 
+mod common;
+mod convert;
+
+// TODO: Should these go to prelude?
+pub use common::*;
+
+pub mod prelude {
+	pub use crate::convert::*;
+}
+
 // # NEW ENTRIES #
 pub static ENTRY_CLIENT_NEW: &str = "hotbolt_entry_client_new";
 pub static ENTRY_CLIENT_DROP: &str = "hotbolt_entry_client_get";
