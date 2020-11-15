@@ -4,10 +4,9 @@ pub mod server;
 pub mod util;
 
 use std::process;
-use std::fs;
 
 use common::Cli;
-use log::{error, debug};
+use log::{debug, error};
 
 fn main() {
 	env_logger::init();

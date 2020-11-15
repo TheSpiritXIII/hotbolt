@@ -39,7 +39,7 @@ pub struct HotboltLibState<'a> {
 impl<'a> HotboltLibState<'a> {
 	fn from(lib: &'a Library) -> Result<Self, String> {
 		Ok(Self {
-			state: load_symbol(lib, hotbolt_ffi::ENTRY_STATE_GET)?,
+			state: load_symbol(lib, hotbolt_ffi::ENTRY_STATE_NEW)?,
 		})
 	}
 

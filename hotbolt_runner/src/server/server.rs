@@ -1,4 +1,4 @@
-use std::{env, io, mem, net::TcpListener, path::Path, fs, process::{self, Child, Command, Stdio}, sync::mpsc::{self, TryRecvError}};
+use std::{env, io, net::TcpListener, path::Path, fs, process::{self, Child, Command, Stdio}, sync::mpsc::{self, TryRecvError}};
 
 use log::{error, info};
 

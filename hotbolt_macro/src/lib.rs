@@ -5,7 +5,6 @@ use hotbolt_ffi::{
 	ENTRY_CLIENT_VERSION,
 	ENTRY_RUN,
 	ENTRY_STATE_DROP,
-	ENTRY_STATE_GET,
 	ENTRY_STATE_NEW,
 };
 use proc_macro::TokenStream;
@@ -292,7 +291,7 @@ pub fn hotbolt_entry_state_get(_attr: TokenStream, token_stream: TokenStream) ->
 		"hotbolt_entry_state_get",
 		token_stream,
 		|| {
-			let ident = format_ident!("{}", ENTRY_STATE_GET);
+			let ident = format_ident!("{}", ENTRY_STATE_NEW);
 			quote! {
 				fn #ident() -> hotbolt::internal::SizedCharArray
 			}

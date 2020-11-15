@@ -3,7 +3,9 @@ use std::{path::Path, process, sync::mpsc::Sender, thread, time::Duration};
 use log::{debug, error, info};
 use notify::{
 	event::{Event, EventKind},
-	RecommendedWatcher, RecursiveMode, Watcher,
+	RecommendedWatcher,
+	RecursiveMode,
+	Watcher,
 };
 
 #[derive(Debug)]
