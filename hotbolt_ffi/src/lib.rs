@@ -22,7 +22,8 @@ NOTE: A server might want this? Maybe a production server running hotbolt?
 Game engine might not (varying Window sizes, unless somehow configurable)
 */
 
-pub static SERVER_VERSION: u8 = 0;
+/// The version of the hotbolt runner that this library supports.
+pub static RUNNER_VERSION: u8 = 0;
 
 /// The internal hotbolt runner version this was written to support.
 ///
@@ -31,7 +32,7 @@ pub static ENTRY_VERSION: &str = "hotbolt_entry_version";
 
 /// Runs the application. This is called in a loop.
 ///
-/// Signature: (client: *const c_void, server: FfiServer, state_ptr: *const c_void)
+/// Signature: (client: *mut c_void, server: FfiServer, state_ptr: *mut c_void)
 pub static ENTRY_RUN: &str = "hotbolt_entry_run";
 
 /// Allocates and returns a new state from the potentially given serialized state.
@@ -46,12 +47,12 @@ pub static ENTRY_STATE_DROP: &str = "hotbolt_entry_state_drop";
 
 /// Serializes the state, ideally in a non-binary-encoded backwards compatible format.
 ///
-/// Signature: (state: *const c_void) -> FfiArray<'static, u8>
+/// Signature: (state: *const c_void) -> FfiArrayMut<'static, u8>
 pub static ENTRY_STATE_SERIALIZE_NEW: &str = "hotbolt_entry_state_serialize_new";
 
 /// Deallocates the buffer from the serializing data.
 ///
-/// Signature: (serialized: FfiArray<'static, u8>)
+/// Signature: (serialized: FfiArrayMut<'static, u8>)
 pub static ENTRY_STATE_SERIALIZE_DROP: &str = "hotbolt_entry_state_serialize_drop";
 
 /// Creates a client. The client consists of mostly static code that is rarely changed.
