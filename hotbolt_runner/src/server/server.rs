@@ -45,6 +45,12 @@ pub fn start<P1: AsRef<Path>, P2: AsRef<Path>>(lib_path: P1, lib_path_normalized
 		process::exit(1);
 	}
 
+	// TODO: This should live elsewhere.
+	if let Err(e) = fs::copy(&lib_path, &lib_path_normalized) {
+		error!("{}", e);
+		error!("Unable to copy library file. Aborting");
+	}
+
 	let mut app_state = None;
 	'spawn: loop {
 		let listener = match TcpListener::bind(&address) {

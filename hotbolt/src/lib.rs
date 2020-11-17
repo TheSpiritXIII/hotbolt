@@ -1,4 +1,4 @@
-pub use hotbolt_ffi::Server;
+pub use hotbolt_ffi::*;
 pub use hotbolt_macro::*;
 
 pub mod internal {

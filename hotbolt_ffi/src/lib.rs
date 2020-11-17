@@ -4,10 +4,10 @@ use std::{
 	os::raw::c_char,
 };
 
+pub mod ffi;
 mod common;
 mod convert;
 
-// TODO: Should these go to prelude?
 pub use common::*;
 
 pub mod prelude {
@@ -21,60 +21,6 @@ Would anybody want these for better logic separation/performance/ease?
 NOTE: A server might want this? Maybe a production server running hotbolt?
 Game engine might not (varying Window sizes, unless somehow configurable)
 */
-
-/// The version of the hotbolt runner that this library supports.
-pub const RUNNER_VERSION: u8 = 0;
-
-/// The internal hotbolt runner version this was written to support.
-///
-/// Signature: `() -> u8`
-pub const ENTRY_VERSION: &str = "hotbolt_entry_version";
-
-/// Runs the application. This is called in a loop.
-///
-/// Signature: `(client: *mut c_void, server: FfiServer, state_ptr: *mut c_void)`
-pub const ENTRY_RUN: &str = "hotbolt_entry_run";
-
-/// Allocates and returns a new state from the potentially given serialized state.
-///
-/// Signature: `(serialized: FfiArray<'static, u8>) -> *mut c_void`
-pub const ENTRY_STATE_NEW: &str = "hotbolt_entry_state_new";
-
-/// Drops the state. Skipped when possible. Do not use this for side-effects.
-///
-/// Signature: `(state: *mut c_void)`
-pub const ENTRY_STATE_DROP: &str = "hotbolt_entry_state_drop";
-
-/// Serializes the state, ideally in a non-binary-encoded backwards compatible format.
-///
-/// Signature: `(state: *const c_void) -> FfiArrayMut<'static, u8>`
-pub const ENTRY_STATE_SERIALIZE_NEW: &str = "hotbolt_entry_state_serialize_new";
-
-/// Deallocates the buffer from the serializing data.
-///
-/// Signature: `(serialized: FfiArrayMut<'static, u8>)`
-pub const ENTRY_STATE_SERIALIZE_DROP: &str = "hotbolt_entry_state_serialize_drop";
-
-/// Creates a client. The client consists of mostly static code that is rarely changed.
-///
-/// Signature: `() -> *mut c_void`
-pub const ENTRY_CLIENT_NEW: &str = "hotbolt_entry_client_new";
-
-/// Drops the client. Skipped when possible. Do not use this for side-effects.
-///
-/// Signature: `(client: *mut c_void)`
-pub const ENTRY_CLIENT_DROP: &str = "hotbolt_entry_client_get";
-
-// TODO: Must copy this in the hotbolt server.
-/// Returns the version identifying the client. This should be from static memory.
-///
-/// Signature: `() -> FfiArray<'static, u8>`
-pub const ENTRY_CLIENT_VERSION: &str = "hotbolt_entry_client_version";
-
-/// Returns true if the the given version is compatible with the current version.
-///
-/// Signature: `(version: FfiArray<'static, u8>) -> boolean`
-pub const ENTRY_CLIENT_COMPATIBLE: &str = "hotbolt_entry_client_compatible";
 
 #[repr(C)]
 pub struct SizedCharArray {

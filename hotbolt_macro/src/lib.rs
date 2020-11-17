@@ -1,72 +1,38 @@
-use hotbolt_ffi::{
-	ENTRY_CLIENT_COMPATIBLE,
-	ENTRY_CLIENT_DROP,
-	ENTRY_CLIENT_NEW,
-	ENTRY_CLIENT_VERSION,
-	ENTRY_RUN,
+use hotbolt_ffi::ffi::{
+	ENTRY_APP_COMPATIBLE,
+	ENTRY_APP_DROP,
+	ENTRY_APP_NEW,
+	ENTRY_APP_RUN,
+	ENTRY_APP_VERSION,
 	ENTRY_STATE_DROP,
 	ENTRY_STATE_NEW,
+	ENTRY_VERSION,
 };
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{Ident, Item, Signature};
+use syn::{Ident, Item};
 
-#[proc_macro_attribute]
-pub fn hotbolt_main(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
-	let input: Item = syn::parse_macro_input!(token_stream);
-	let client_type = match &input {
-		Item::Struct(item) => item,
-		_ => panic!("#[{}] is intended on a struct", "hotbolt_main"),
-	};
-
-	let client_name = &client_type.ident;
-
-	let expanded = quote! {
-		type HotboltEntryClient: hotbolt::Client = #client_name;
-
-		#[hotbolt::hotbolt_entry_compatible]
-		fn hotbolt_auto_compatible() {
-			todo!();
+// https://stackoverflow.com/questions/38088067/equivalent-of-func-or-function-in-rust
+macro_rules! function_name {
+	() => {{
+		fn f() {}
+		fn type_name_of<T>(_: T) -> &'static str {
+			std::any::type_name::<T>()
 		}
-
-		#[hotbolt::hotbolt_entry_init]
-		fn hotbolt_auto_init() {
-			todo!();
-		}
-
-		#[hotbolt::hotbolt_entry_main]
-		fn hotbolt_auto_main(server: impl Server, state: &[u8]) {
-			todo!();
-		}
-
-		#[hotbolt::hotbolt_entry_destroy]
-		fn hotbolt_auto_destroy() {
-			todo!();
-		}
-
-		#[hotbolt::hotbolt_entry_state_get]
-		fn hotbolt_auto_state() -> Vec<u8> {
-			todo!();
-		}
-
-		#[hotbolt::hotbolt_entry_version]
-		fn hotbolt_auto_version() -> Vec<u8> {
-			todo!();
-		}
-	};
-
-	TokenStream::from(expanded)
+		let name = type_name_of(f);
+		&name[..name.len() - 3]
+	}}
 }
 
-fn wrap_method<TSignature, TBody>(
+// TODO: Maybe compile time type assertions for cleaner errors?
+
+fn wrap_method2<T>(
 	name: &str,
 	token_stream: TokenStream,
-	signature_fn: TSignature,
-	body_fn: TBody,
+	function_fn: T
 ) -> TokenStream
 where
-	TSignature: Fn() -> proc_macro2::TokenStream,
-	TBody: Fn(&Signature) -> proc_macro2::TokenStream,
+	T: Fn(&Ident) -> proc_macro2::TokenStream,
 {
 	let input: Item = syn::parse_macro_input!(token_stream);
 	let input_function = match &input {
@@ -74,96 +40,276 @@ where
 		_ => panic!("#[{}] is intended on a function", name),
 	};
 
-	let sig = signature_fn();
-	let body = body_fn(&input_function.sig);
+	let function = function_fn(&input_function.sig.ident);
 	let expanded = quote! {
 		#input
 
 		#[cfg(not(feature = "hotbolt_erase"))]
 		#[no_mangle]
-		pub extern "C" #sig {
-			#body
-		}
+		pub extern "C" #function
 	};
 
 	TokenStream::from(expanded)
 }
 
 #[proc_macro_attribute]
-pub fn hotbolt_entry_version(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
-	wrap_method(
-		"hotbolt_entry_version",
+pub fn hotbolt_trait_state(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	let input: Item = syn::parse_macro_input!(token_stream);
+	if let Item::Struct(input_struct) = &input {
+		let name = &input_struct.ident;
+		let expanded = quote! {
+			type HotboltAutoState: hotbolt::ffi::FfiState = #name;
+
+			#[hotbolt::hotbolt_entry_state_new]
+			fn hotbolt_auto_state_new(serialized: hotbolt::ffi::FfiArray<'static, u8>) -> *mut c_void {
+				HotboltAutoState::state_new(serialized)
+			}
+
+			#[hotbolt::hotbolt_entry_state_drop]
+			fn hotbolt_auto_state_drop(state_ptr: *mut c_void) {
+				HotboltAutoState::state_drop(state_ptr)
+			}
+
+			#[hotbolt::hotbolt_entry_state_serialize_new]
+			fn hotbolt_auto_state_serialized(state_ptr: *const c_void) -> hotbolt::ffi::FfiArrayMut<'static, u8> {
+				HotboltAutoState::state_serialize_new(state_ptr)
+			}
+
+			#[hotbolt::hotbolt_entry_state_serialize_drop]
+			fn hotbolt_auto_state_serialized(serialized: hotbolt::ffi::FfiArrayMut<'static, u8>) {
+				HotboltAutoState::state_serialize_drop(serialized)
+			}
+		};
+
+		TokenStream::from(expanded)
+	} else {
+		panic!("#[hotbolt_trait_state] is intended on a struct");
+	}
+}
+
+#[proc_macro_attribute]
+pub fn hotbolt_trait_entry(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	let input: Item = syn::parse_macro_input!(token_stream);
+	if let Item::Struct(input_struct) = &input {
+		let name = &input_struct.ident;
+		let expanded = quote! {
+			type HotboltAutoEntry: hotbolt::ffi::FfiEntry = #name;
+
+			#[hotbolt::hotbolt_entry_run]
+			fn hotbolt_auto_run(app_ptr: *mut c_void, server: FfiServer, state_ptr: *mut c_void) {
+				HotboltAutoEntry::run(app_ptr, server, state_ptr)
+			}
+		};
+
+		TokenStream::from(expanded)
+	} else {
+		panic!("#[{}] is intended on a struct", function_name!());
+	}
+}
+
+#[proc_macro_attribute]
+pub fn hotbolt_entry_run(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	let run_method: proc_macro2::TokenStream = wrap_method2(
+		function_name!(),
 		token_stream,
-		|| {
-			let ident = format_ident!("{}", ENTRY_CLIENT_VERSION);
+		|ident| {
+			let name = format_ident!("{}", ENTRY_APP_RUN);
 			quote! {
-				fn #ident()
+				fn #name(app_ptr: *mut c_void, server: FfiServer, state_ptr: *mut c_void) {
+					#ident(app_ptr, server, state_ptr)
+				}
 			}
 		},
-		|function_ident| {
-			let ident = &function_ident.ident;
+	)
+	.into();
+	let version_method = hotbolt_version();
+	let wrapper = quote! {
+		#run_method
+
+		#version_method
+	};
+	TokenStream::from(wrapper)
+}
+
+#[proc_macro_attribute]
+pub fn hotbolt_entry_state_new(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	wrap_method2(
+		function_name!(),
+		token_stream,
+		|ident| {
+			let name = format_ident!("{}", ENTRY_STATE_NEW);
 			quote! {
-				#ident()
+				fn #name(serialized: hotbolt::ffi::FfiArray<'static, u8>) -> *mut std::ffi::c_void {
+					#ident(serialized)
+				}
+			}
+		}
+	)
+}
+
+#[proc_macro_attribute]
+pub fn hotbolt_entry_state_drop(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	wrap_method2(
+		function_name!(),
+		token_stream,
+		|ident| {
+			let name = format_ident!("{}", ENTRY_STATE_DROP);
+			quote! {
+				fn #name(state: *mut std::ffi::c_void) {
+					#ident(state)
+				}
 			}
 		},
 	)
 }
 
 #[proc_macro_attribute]
-pub fn hotbolt_entry_compatible(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
-	wrap_method(
-		"hotbolt_entry_compatible",
+pub fn hotbolt_entry_state_serialize_new(
+	_attr: TokenStream,
+	token_stream: TokenStream,
+) -> TokenStream {
+	wrap_method2(
+		function_name!(),
 		token_stream,
-		|| {
-			let ident = format_ident!("{}", ENTRY_CLIENT_COMPATIBLE);
+		|ident| {
+			let name = format_ident!("{}", ENTRY_STATE_NEW);
 			quote! {
-				fn #ident()
+				fn #name(state_ptr: *const c_void) -> hotbolt::ffi::FfiArrayMut<'static, u8> {
+					&#ident(state_ptr)
+				}
 			}
-		},
-		|function_ident| {
-			let ident = &function_ident.ident;
+		}
+	)
+}
+
+#[proc_macro_attribute]
+pub fn hotbolt_entry_state_serialize_drop(
+	_attr: TokenStream,
+	token_stream: TokenStream,
+) -> TokenStream {
+	wrap_method2(
+		function_name!(),
+		token_stream,
+		|ident| {
+			let name = format_ident!("{}", ENTRY_STATE_NEW);
 			quote! {
-				#ident()
+				fn #name(serialized: FfiArrayMut<'static, u8>) {
+					#ident(serialized)
+				}
+			}
+		}
+	)
+}
+
+#[proc_macro_attribute]
+pub fn hotbolt_trait_app(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	let input: Item = syn::parse_macro_input!(token_stream);
+	if let Item::Struct(input_struct) = &input {
+		let name = &input_struct.ident;
+		let expanded = quote! {
+			type HotboltAutoApp: hotbolt::ffi::FfiApp = #name;
+
+			#[hotbolt::hotbolt_entry_app_new]
+			fn hotbolt_auto_app_new() -> *mut c_void {
+				HotboltAutoApp::app_new()
+			}
+
+			#[hotbolt::hotbolt_entry_app_drop]
+			fn hotbolt_auto_app_drop(app_ptr: *mut c_void) {
+				HotboltAutoApp::app_drop(app_ptr)
+			}
+		};
+
+		TokenStream::from(expanded)
+	} else {
+		panic!("#[{}] is intended on a struct", function_name!(),);
+	}
+}
+
+#[proc_macro_attribute]
+pub fn hotbolt_entry_app_new(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	wrap_method2(
+		function_name!(),
+		token_stream,
+		|ident| {
+			let name = format_ident!("{}", ENTRY_APP_NEW);
+			quote! {
+				fn #name() -> *mut c_void {
+					#ident()
+				}
 			}
 		},
 	)
 }
 
 #[proc_macro_attribute]
-pub fn hotbolt_entry_init(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
-	wrap_method(
-		"hotbolt_entry_init",
+pub fn hotbolt_entry_app_drop(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	wrap_method2(
+		function_name!(),
 		token_stream,
-		|| {
-			let ident = format_ident!("{}", ENTRY_CLIENT_NEW);
+		|ident| {
+			let name = format_ident!("{}", ENTRY_APP_DROP);
 			quote! {
-				fn #ident()
-			}
-		},
-		|function_ident| {
-			let ident = &function_ident.ident;
-			quote! {
-				#ident()
+				fn #name(app_ptr: *mut c_void) {
+					#ident(app_ptr)
+				}
 			}
 		},
 	)
 }
 
 #[proc_macro_attribute]
-pub fn hotbolt_entry_destroy(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
-	wrap_method(
-		"hotbolt_entry_destroy",
+pub fn hotbolt_trait_app_version(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	let input: Item = syn::parse_macro_input!(token_stream);
+	if let Item::Struct(input_struct) = &input {
+		let name = &input_struct.ident;
+		let expanded = quote! {
+			type HotboltAutoAppVersion: hotbolt::ffi::FfiAppVersion = #name;
+
+			#[hotbolt::hotbolt_entry_app_version]
+			fn hotbolt_auto_app_version() -> hotbolt::ffi::FfiArray<'static, u8> {
+				HotboltAutoAppVersion::app_version()
+			}
+
+			#[hotbolt::hotbolt_entry_app_compatible]
+			fn hotbolt_auto_app_compatible(other: hotbolt::ffi::FfiArray<'static, u8>) -> bool {
+				HotboltAutoAppVersion::app_compatible(other)
+			}
+		};
+
+		TokenStream::from(expanded)
+	} else {
+		panic!("#[{}] is intended on a struct", function_name!());
+	}
+}
+
+#[proc_macro_attribute]
+pub fn hotbolt_entry_app_version(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	wrap_method2(
+		function_name!(),
 		token_stream,
-		|| {
-			let ident = format_ident!("{}", ENTRY_CLIENT_DROP);
+		|ident| {
+			let name = format_ident!("{}", ENTRY_APP_VERSION);
 			quote! {
-				fn #ident()
+				fn #name() -> hotbolt::ffi::FfiArray<'static, u8> {
+					#ident()
+				}
 			}
 		},
-		|function_ident| {
-			let ident = &function_ident.ident;
+	)
+}
+
+#[proc_macro_attribute]
+pub fn hotbolt_entry_app_compatible(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
+	wrap_method2(
+		function_name!(),
+		token_stream,
+		|ident| {
+			let name = format_ident!("{}", ENTRY_APP_COMPATIBLE);
 			quote! {
-				#ident()
+				fn #name(other: hotbolt::ffi::FfiArray<u8>) -> bool {
+					#ident(other)
+				}
 			}
 		},
 	)
@@ -171,12 +317,13 @@ pub fn hotbolt_entry_destroy(_attr: TokenStream, token_stream: TokenStream) -> T
 
 // TODO: What to do if the main entry is named main (not allowed to our input)?
 // TODO: Clippy warning: recursing into entrypoint `main`
+/// Deprecated.
 #[proc_macro_attribute]
 pub fn hotbolt_entry_main(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
 	let input: Item = syn::parse_macro_input!(token_stream);
 	if let Item::Fn(input_function) = &input {
 		let input_function_name = &input_function.sig.ident;
-		let entry_name = format_ident!("{}", ENTRY_RUN);
+		let entry_name = format_ident!("{}", ENTRY_APP_RUN);
 
 		let input_count = input_function.sig.inputs.len();
 		let args: Vec<(Ident, syn::Path, _)> = vec![
@@ -214,7 +361,7 @@ pub fn hotbolt_entry_main(_attr: TokenStream, token_stream: TokenStream) -> Toke
 		let state_entry = if input_count < 2 {
 			quote! {
 				#[hotbolt::hotbolt_entry_state_get]
-				fn hotbolt_expanded_entry_state() -> Vec<u8> {
+				fn hotbolt_expanded_entry() -> Vec<u8> {
 					Vec::new()
 				}
 			}
@@ -234,73 +381,33 @@ pub fn hotbolt_entry_main(_attr: TokenStream, token_stream: TokenStream) -> Toke
 		};
 
 		TokenStream::from(expanded)
-		// let value = format!("{}", expanded);
-		// TokenStream::from(quote! {
-		// 	#[doc = #value]
-		// 	///
-		// 	#input
-		// })
 	} else {
-		panic!("#[hotbolt_entry_main] is intended on a function");
+		panic!("#[{}] is intended on a function", function_name!(),);
 	}
 }
 
-#[proc_macro_attribute]
-pub fn hotbolt_entry_state_new(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
-	wrap_method(
-		"hotbolt_entry_state_new",
-		token_stream,
-		|| {
-			let ident = format_ident!("{}", ENTRY_STATE_NEW);
-			quote! {
-				fn #ident() -> hotbolt::internal::SizedCharArray
-			}
-		},
-		|function_ident| {
-			let ident = &function_ident.ident;
-			quote! {
-				hotbolt::internal::SizedCharArray::from_slice(&#ident())
-			}
-		},
-	)
-}
-
-#[proc_macro_attribute]
-pub fn hotbolt_entry_state_drop(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
-	wrap_method(
-		"hotbolt_entry_state_drop",
-		token_stream,
-		|| {
-			let ident = format_ident!("{}", ENTRY_STATE_DROP);
-			quote! {
-				fn #ident() -> hotbolt::internal::SizedCharArray
-			}
-		},
-		|function_ident| {
-			let ident = &function_ident.ident;
-			quote! {
-				hotbolt::internal::SizedCharArray::from_slice(&#ident())
-			}
-		},
-	)
-}
-
+/// Deprecated.
 #[proc_macro_attribute]
 pub fn hotbolt_entry_state_get(_attr: TokenStream, token_stream: TokenStream) -> TokenStream {
-	wrap_method(
-		"hotbolt_entry_state_get",
+	wrap_method2(
+		function_name!(),
 		token_stream,
-		|| {
-			let ident = format_ident!("{}", ENTRY_STATE_NEW);
+		|ident| {
+			let name = format_ident!("{}", ENTRY_STATE_NEW);
 			quote! {
-				fn #ident() -> hotbolt::internal::SizedCharArray
-			}
-		},
-		|function_ident| {
-			let ident = &function_ident.ident;
-			quote! {
-				hotbolt::internal::SizedCharArray::from_slice(&#ident())
+				fn #name() -> hotbolt::internal::SizedCharArray {
+					hotbolt::internal::SizedCharArray::from_slice(&#ident())
+				}
 			}
 		},
 	)
+}
+
+fn hotbolt_version() -> proc_macro2::TokenStream {
+	let ident = format_ident!("{}", ENTRY_VERSION);
+	quote! {
+		fn #ident() -> u8 {
+			hotbolt::RUNNER_VERSION
+		}
+	}
 }
