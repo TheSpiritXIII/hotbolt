@@ -4,9 +4,9 @@ use std::{
 	os::raw::c_char,
 };
 
-pub mod ffi;
 mod common;
 mod convert;
+pub mod ffi;
 
 pub use common::*;
 
@@ -145,7 +145,8 @@ pub trait Client {
 	type Serializer: Serializer<Self::T>;
 	type Compatibility: Compatibility;
 
-	/// Creates the client. Only called on initialization or if the client is incompatible with the last run client.
+	/// Creates the client. Only called on initialization or if the client is incompatible with the
+	/// last run client.
 	fn new() -> Self;
 
 	/// The main entry point for the application.

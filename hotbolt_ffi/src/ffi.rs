@@ -1,6 +1,19 @@
 use std::ffi::c_void;
 
-use crate::{FfiArray, FfiArrayMut, FfiServer};
+use crate::{FfiArray, FfiArrayMut};
+
+/// Server object sent over FFI. See [`Server`](Server).
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct FfiServer {
+	pub server: *const c_void,
+	pub restart_hard: unsafe extern "C" fn(server_ptr: *const c_void),
+	pub restart_hard_with:
+		unsafe extern "C" fn(server_ptr: *const c_void, state: FfiArrayMut<'static, u8>),
+	pub restart_soft: unsafe extern "C" fn(server_ptr: *const c_void),
+	pub restart_soft_with:
+		unsafe extern "C" fn(server_ptr: *const c_void, state: FfiArrayMut<'static, u8>),
+}
 
 /// The version of the hotbolt runner that this library supports.
 pub const RUNNER_VERSION: u8 = 0;
@@ -72,7 +85,6 @@ pub trait FfiAppVersion {
 
 /// See [`FfiAppVersion::app_version`](FfiAppVersion::app_version).
 pub const ENTRY_APP_VERSION: &str = "hotbolt_entry_app_version";
-
 
 /// See [`FfiAppVersion::app_compatible`](FfiAppVersion::app_compatible).
 pub const ENTRY_APP_COMPATIBLE: &str = "hotbolt_entry_app_compatible";
