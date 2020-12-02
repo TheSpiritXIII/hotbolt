@@ -39,9 +39,6 @@ impl<T> Pointer<T> for *mut T {
 ///
 /// This class is generally unsafe to use because it does not deallocate the contained array. As a
 /// general rule, you should always use the variant of this class with a lifetime.
-///
-/// Any instance of this class with a `static` lifetime has forfeited its right to any safety. Any
-/// conversion to an instance with this lifetime means you are giving ownership away.
 #[repr(C)]
 pub struct RawFfiArray<'a, T: Sized, U: Pointer<T>> {
 	data: U,
@@ -55,7 +52,10 @@ pub struct RawFfiArray<'a, T: Sized, U: Pointer<T>> {
 /// For more information, see [`RawFfiArray`](RawFfiArray).
 pub type FfiArray<'a, T> = RawFfiArray<'a, T, *const T>;
 
-/// Array passed around using a C FFI, used when ownership is being transferred.
+/// Array passed around using a C FFI, used when ownership is being transferred -- as a return type
+/// it means that ownership is being forfeited and as an input it means ownership is being
+/// transferred (typically always using the `'static` lifetime because lifetimes cannot be tracked
+/// over FFI bounds).
 ///
 /// For more information, see [`RawFfiArray`](RawFfiArray).
 pub type FfiArrayMut<'a, T> = RawFfiArray<'a, T, *mut T>;

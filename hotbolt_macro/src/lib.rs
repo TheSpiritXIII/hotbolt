@@ -6,7 +6,7 @@ use hotbolt_ffi::ffi::{
 	ENTRY_APP_VERSION,
 	ENTRY_STATE_DROP,
 	ENTRY_STATE_NEW,
-	ENTRY_VERSION,
+	ENTRY_SERVER_VERSION,
 };
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
@@ -363,10 +363,10 @@ pub fn hotbolt_entry_state_get(_attr: TokenStream, token_stream: TokenStream) ->
 }
 
 fn hotbolt_version() -> proc_macro2::TokenStream {
-	let ident = format_ident!("{}", ENTRY_VERSION);
+	let ident = format_ident!("{}", ENTRY_SERVER_VERSION);
 	quote! {
 		fn #ident() -> u8 {
-			hotbolt::RUNNER_VERSION
+			hotbolt::SERVER_VERSION
 		}
 	}
 }

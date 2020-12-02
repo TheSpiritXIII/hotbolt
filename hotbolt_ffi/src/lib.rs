@@ -4,6 +4,7 @@ use std::{
 	os::raw::c_char,
 };
 
+pub mod base;
 mod common;
 mod convert;
 pub mod ffi;
