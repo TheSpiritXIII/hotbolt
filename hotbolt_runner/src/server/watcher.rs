@@ -87,7 +87,7 @@ pub fn watch_notify<P: AsRef<Path>>(
 	debug!("Started with library path: {}", path.display());
 
 	let watcher_result: Result<RecommendedWatcher, _> =
-		Watcher::new_immediate(move |res: Result<Event, _>| match res {
+		Watcher::new(move |res: Result<Event, _>| match res {
 			Ok(event) => {
 				let runner_event = match event.kind {
 					EventKind::Create(_) => {
