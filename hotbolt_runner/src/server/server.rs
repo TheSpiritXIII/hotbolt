@@ -1,10 +1,16 @@
-use std::{env, io, net::TcpListener, path::Path, fs, process::{self, Child, Command, Stdio}, sync::mpsc::{self, TryRecvError}};
+use std::{
+	env, fs, io,
+	net::TcpListener,
+	path::Path,
+	process::{self, Child, Command, Stdio},
+	sync::mpsc::{self, TryRecvError},
+};
 
 use log::{error, info};
 
-use super::watcher;
+use super::watcher::{self, notify::NotifyWatcher, poll::PollWatcher, Watcher};
 use crate::{
-	common::{ClientMessage, ServerMessage},
+	common::{ClientMessage, ServerMessage, WatcherType},
 	util::tcp,
 	Cli,
 };
@@ -37,10 +43,21 @@ fn send<'a>(
 	}
 }
 
-pub fn start<P1: AsRef<Path>, P2: AsRef<Path>>(lib_path: P1, lib_path_normalized: P2, address: &str, cli: Cli) {
+pub fn start<P1: AsRef<Path>, P2: AsRef<Path>>(
+	lib_path: P1,
+	lib_path_normalized: P2,
+	address: &str,
+	cli: Cli,
+) {
 	let (watcher_sender, watcher_receiver) = mpsc::channel();
 
-	if let Err(e) = watcher::watch_poll(&lib_path, watcher_sender, std::time::Duration::from_secs(2)) {
+	let watcher = match cli.watcher {
+		WatcherType::Poll => {
+			PollWatcher::new(std::time::Duration::from_secs(2)).run(&lib_path, watcher_sender)
+		}
+		WatcherType::Notify => NotifyWatcher::new().run(&lib_path, watcher_sender),
+	};
+	if let Err(e) = watcher {
 		error!("{}", e);
 		process::exit(1);
 	}
@@ -151,7 +168,7 @@ pub fn start<P1: AsRef<Path>, P2: AsRef<Path>>(lib_path: P1, lib_path_normalized
 				// 	&mut process,
 				// 	ServerMessage::Start(app_state.clone()),
 				// ) {
-					continue 'spawn;
+				continue 'spawn;
 				// }
 			}
 

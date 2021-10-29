@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+	path::{Path, PathBuf},
+	str::FromStr,
+};
 
 use clap::Parser;
 
@@ -34,9 +37,31 @@ pub struct Cli {
 	#[clap(long, default_value = "49152")]
 	pub port: String,
 
+	// TODO: Need a way to pass polling duration.
+	/// The server watcher type.
+	#[clap(long, default_value = "poll")]
+	pub watcher: WatcherType,
+
 	/// Whether the application is started in client mode or server mode.
 	#[clap(long)]
 	pub client: bool,
+}
+
+pub enum WatcherType {
+	Poll,
+	Notify,
+}
+
+impl FromStr for WatcherType {
+	type Err = &'static str;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s {
+			"poll" => Ok(WatcherType::Poll),
+			"notify" => Ok(WatcherType::Notify),
+			_ => Err("no match"),
+		}
+	}
 }
 
 impl Cli {
