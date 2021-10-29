@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use clap::Clap;
+use clap::Parser;
 
 use crate::util::cargo;
 
@@ -11,7 +11,7 @@ fn path_validator(input: &str) -> Result<(), String> {
 	}
 	Ok(())
 }
-#[derive(Clap)]
+#[derive(Parser)]
 #[clap(version = "0.1")]
 pub struct Cli {
 	/// The directory of your Cargo project or file if using --file.
@@ -41,7 +41,7 @@ pub struct Cli {
 
 impl Cli {
 	pub fn parse() -> Self {
-		Clap::parse()
+		Parser::parse()
 	}
 
 	pub fn library_path(&self) -> Result<PathBuf, String> {
