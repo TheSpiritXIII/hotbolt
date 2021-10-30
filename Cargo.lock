@@ -114,6 +114,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "env_logger"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b2cf0344971ee6c64c31be0d530793fba457d322dfec2810c453d0ef228f9c3"
+dependencies = [
+ "atty",
+ "humantime",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
 name = "filetime"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -172,13 +185,21 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "clap",
- "env_logger",
+ "env_logger 0.8.4",
  "hotbolt_ffi",
  "libloading",
  "log",
  "notify",
  "serde",
  "toml",
+]
+
+[[package]]
+name = "hotbolt-test"
+version = "0.1.0"
+dependencies = [
+ "env_logger 0.9.0",
+ "log",
 ]
 
 [[package]]

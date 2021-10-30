@@ -171,5 +171,11 @@ cargo build
 pushd examples
 cargo build
 popd
-RUST_LOG=hotbolt_runner=debug cargo run "examples/counter"
+RUST_LOG=hotbolt_runner=debug cargo run --bin hotbolt-runner "examples/counter"
+```
+
+### Test
+There's a test project available that invokes cargo to create and build a new project:
+```bash
+RUST_LOG=hotbolt_test=debug cargo run --bin hotbolt-test
 ```

@@ -68,7 +68,7 @@ pub fn cargo_lib_name<P: AsRef<Path>>(path: P) -> Result<String, String> {
 }
 
 pub fn cargo_target_path<P: AsRef<Path>>(path: &P) -> Result<PathBuf, String> {
-	let target_local = path.as_ref().join("/target");
+	let target_local = path.as_ref().join("target");
 	if target_local.is_dir() {
 		Ok(target_local)
 	} else {
@@ -89,7 +89,7 @@ pub fn cargo_target_path<P: AsRef<Path>>(path: &P) -> Result<PathBuf, String> {
 				))
 			}
 		} else {
-			Err(format!("Invalid Cargo path in `{}`", parent_path.display()))
+			Err(format!("Invalid Cargo path in `{}`", path.as_ref().display()))
 		}
 	}
 }
