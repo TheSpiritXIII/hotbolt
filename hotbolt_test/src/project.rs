@@ -3,12 +3,14 @@ use std::{
 	fs::{create_dir, remove_dir_all, OpenOptions},
 	io::{self, Error, ErrorKind, Seek, SeekFrom, Write},
 	path::{Path, PathBuf},
-	process::{Child, Command},
+	process::Command,
 };
 
 use log::info;
 
-fn root_directory() -> PathBuf {
+use crate::reload::HotReloadCommand;
+
+pub fn root_directory() -> PathBuf {
 	let dir = env!("CARGO_MANIFEST_DIR");
 	let mut path = PathBuf::from(dir);
 	path.pop();
@@ -126,18 +128,7 @@ impl Project {
 		Ok(())
 	}
 
-	pub fn hotbolt(&self) -> io::Result<Child> {
-		info!("Starting hotbolt");
-		let mut command = Command::new("cargo");
-		let child = command
-			.arg("run")
-			.arg("--bin")
-			.arg("hotbolt-runner")
-			.arg(self.dir.display().to_string())
-			.current_dir(root_directory())
-			// .stdout(Stdio::piped())
-			// .stderr(Stdio::piped())
-			.spawn()?;
-		Ok(child)
+	pub fn hot_reload(&self) -> HotReloadCommand {
+		HotReloadCommand::new(&self.dir)
 	}
 }
