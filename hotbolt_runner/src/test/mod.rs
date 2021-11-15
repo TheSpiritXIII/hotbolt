@@ -10,11 +10,9 @@ use project::{Builder, Project};
 static INIT: Once = Once::new();
 
 fn setup() {
+	let _ = env_logger::builder().is_test(true).try_init();
 	INIT.call_once(|| {
-		env_logger::init();
-
-		let builder = Builder::new();
-		builder.clean_all().expect("Unable to clean temp directory");
+		Builder::setup().expect("Unable to setupss temp directory");
 	});
 }
 
@@ -107,7 +105,6 @@ const TEST_HARD_MANUAL_OUT_AFTER: &'static str = "Hello hot reload!";
 
 // TODO: Ignore this test until we fix it.
 #[tokio::test]
-#[ignore]
 async fn test_hard_manual() -> io::Result<()> {
 	test("hard_manual", hard_manual).await
 }

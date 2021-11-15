@@ -174,8 +174,8 @@ popd
 RUST_LOG=hotbolt_runner=debug cargo run "examples/counter"
 ```
 
-### Test
+### Tests
 There are tests available which invokes cargo to create, build and run a new project:
 ```bash
-RUST_LOG=hotbolt_runner=debug cargo test -- --nocapture
+RUST_LOG=hotbolt_runner=debug cargo test -- --test-threads=1 --nocapture
 ```

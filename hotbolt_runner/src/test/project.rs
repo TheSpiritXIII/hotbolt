@@ -38,12 +38,20 @@ impl Builder {
 		Project::setup(&self.dir, name)
 	}
 
-	pub fn clean_all(&self) -> io::Result<()> {
+	fn clean_all(&self) -> io::Result<()> {
 		if self.dir.exists() {
 			info!("Removing directory: {}", self.dir.display());
 			remove_dir_all(&self.dir)?;
 		}
 		Ok(())
+	}
+
+	pub fn setup() -> io::Result<()> {
+		let builder = Builder::new();
+		builder.clean_all()?;
+
+		info!("Creating dir: {}", Path::display(builder.dir.as_ref()));
+		create_dir(&builder.dir)
 	}
 }
 
@@ -54,11 +62,6 @@ pub struct Project {
 
 impl Project {
 	fn setup(dir: impl AsRef<Path>, name: &str) -> io::Result<Self> {
-		if !Path::exists(dir.as_ref()) {
-			info!("Creating dir: {}", Path::display(dir.as_ref()));
-			create_dir(&dir)?;
-		}
-
 		info!("Setting up project: {}", name);
 		let mut command = Command::new("cargo");
 		let status = command
