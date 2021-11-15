@@ -2,6 +2,8 @@ pub mod client;
 pub mod common;
 pub mod server;
 pub mod util;
+#[cfg(test)]
+mod test;
 
 use std::process;
 

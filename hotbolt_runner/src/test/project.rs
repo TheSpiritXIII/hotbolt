@@ -8,7 +8,7 @@ use std::{
 
 use log::info;
 
-use crate::reload::HotReloadCommand;
+use super::reload::HotReloadCommand;
 
 pub fn root_directory() -> PathBuf {
 	let dir = env!("CARGO_MANIFEST_DIR");

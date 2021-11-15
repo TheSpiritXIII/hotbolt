@@ -14,7 +14,7 @@ use tokio::{
 	time::timeout,
 };
 
-use crate::project::root_directory;
+use super::project::root_directory;
 
 pub struct HotReloadCommand {
 	command: Command,
@@ -114,7 +114,7 @@ impl HotReload {
 			if let Some((_, sender)) = search_lock.take() {
 				sender
 					.send(Err(io::Error::new(ErrorKind::Other, "Process quit")))
-					.expect("TODO");
+					.expect("Unable to send process quit error");
 			}
 		});
 

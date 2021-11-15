@@ -4,7 +4,6 @@ members = [
 	"hotbolt_macro",
 	"hotbolt_runner",
 	"hotbolt",
-	"hotbolt_test",
 ]
 exclude = [
 	"examples",
